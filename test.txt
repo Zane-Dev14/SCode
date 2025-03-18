@@ -1,0 +1,643 @@
+
+## Features Summary
+
+1. **Whole Project Analysis**: Scans the entire codebase, not just individual files
+2. **Multi-Language Support**: Uses Tree-sitter to parse various programming languages
+3. **Security Vulnerability Detection**: Identifies common security issues in code
+4. **3D Code Visualization**: Creates an interactive 3D representation of the codebase
+5. **Code Flow Mapping**: Shows relationships between functions, variables, and files
+6. **Vulnerability Highlighting**: Visually marks security issues in the 3D model
+7. **Interactive Exploration**: Allows clicking, hovering, and zooming in the visualization
+8. **Beginner-Friendly Explanations**: Provides simple explanations via tooltips
+9. **Automated Dependency Tracking**: Follows imports to map the entire project
+10. **Containerized Deployment**: Packaged in Docker for easy installation
+
+## Implementation Plan
+
+```mermaid
+graph TD
+    A[VSCode Plugin] --> B[Frontend: TypeScript]
+    A --> C[Backend: Python]
+    
+    B --> B1[3D Visualization - Three.js]
+    B --> B2[VSCode Integration]
+    B --> B3[User Interface]
+    
+    C --> C1[Code Parser - Tree-sitter]
+    C --> C2[Vulnerability Scanner]
+    C --> C3[Project Mapper]
+    
+    C1 --> D1[AST Generation]
+    C1 --> D2[Multi-language Support]
+    
+    C2 --> E1[SQLite Vulnerability DB]
+    C2 --> E2[Pattern Matching]
+    
+    C3 --> F1[Dependency Tracking]
+    C3 --> F2[Relationship Mapping]
+    
+    B1 --> G1[3D Rendering]
+    B1 --> G2[Interactive Controls]
+    
+    B2 --> H1[Extension Packaging]
+    B2 --> H2[Command Registration]
+    
+    B3 --> I1[Results Display]
+    B3 --> I2[User Settings]
+    
+    J[Docker] --> J1[Containerization]
+    J --> J2[Dependency Management]
+
+```
+
+## Project Architecture & Implementation Details
+
+### 1. Core Components
+
+#### Backend (Python)
+- **Project Mapper**: 
+  - Starts with entry point file (e.g., `main.py`)
+  - Recursively follows imports to identify all project files
+  - Builds a comprehensive map of the project structure
+
+- **Parser (Tree-sitter Integration)**:
+  - Initializes Tree-sitter for multiple languages
+  - Parses each file into an Abstract Syntax Tree (AST)
+  - Combines individual ASTs into a unified project representation
+  - Exports the full AST as a structured JSON document
+
+- **Vulnerability Scanner**:
+  - Maintains a SQLite database of vulnerability patterns
+  - Uses pattern matching to identify security issues in the AST
+  - Categories vulnerabilities (e.g., hardcoded credentials, unsafe functions)
+  - Assigns severity levels to each detected issue
+
+#### Frontend (TypeScript)
+- **VSCode Integration**:
+  - Registers custom commands in VSCode
+  - Handles user interactions and preferences
+  - Manages communication between VSCode and the Python backend
+
+- **3D Visualization (Three.js)**:
+  - Converts the AST JSON into a 3D graph structure
+  - Implements different visual representations for code elements:
+    - Functions as blue spheres
+    - Variables as green cubes
+    - Libraries as yellow triangles
+    - Relationships as connecting lines
+  - Adds interactive features:
+    - Zoom in/out functionality
+    - Rotation and pan controls
+    - Click-to-select for detailed information
+    - Hover for tooltips with explanations
+
+- **User Interface**:
+  - Provides analysis controls and settings
+  - Displays vulnerability reports and summaries
+  - Offers filtering options for the visualization
+
+### 2. Implementation Process
+
+1. **Setup Development Environment**:
+   - Install VSCode Extension development tools
+   - Set up Python backend with necessary libraries
+   - Configure Tree-sitter for target languages
+   - Initialize Three.js for visualization
+
+2. **Develop Core Parser**:
+   - Implement Tree-sitter integration for multiple languages
+   - Create AST generation and traversal logic
+   - Build project mapping functionality for dependency tracking
+
+3. **Create Vulnerability Database**:
+   - Design SQLite schema for vulnerability patterns
+   - Populate database with common security issues
+   - Implement pattern matching algorithm
+
+4. **Build 3D Visualization**:
+   - Develop Three.js rendering of the project structure
+   - Implement node and edge visualization
+   - Add interactive controls and navigation
+
+5. **Integrate with VSCode**:
+   - Create extension manifest and configuration
+   - Implement VSCode commands and views
+   - Establish communication between frontend and backend
+
+6. **Add User Interface**:
+   - Design and implement analysis controls
+   - Create vulnerability reporting interface
+   - Add filtering and customization options
+
+7. **Containerize with Docker**:
+   - Create Dockerfile for the entire application
+   - Configure container to communicate with VSCode
+   - Ensure all dependencies are properly managed
+
+8. **Testing and Optimization**:
+   - Test on various project types and languages
+   - Optimize performance for large codebases
+   - Refine visualization for clarity and usability
+
+### 3. Technical Workflow
+
+1. **Initiation**: User activates the plugin in VSCode with a command
+2. **Project Mapping**: Backend identifies all project files by following imports
+3. **Parsing**: Tree-sitter converts each file into an AST
+4. **Vulnerability Scanning**: Backend checks the AST against known patterns
+5. **Visualization**: Three.js converts the AST and vulnerability data into a 3D model
+6. **Interaction**: User explores the 3D model, reviewing code structure and issues
+7. **Remediation**: User can click on issues to navigate to the problematic code in VSCode
+
+### 4. Key Implementation Challenges
+
+1. **AST Generation for Multiple Languages**: 
+   - Implement language-specific Tree-sitter configurations
+   - Handle differences in import/include mechanisms across languages
+   - SHOULD PARSE THE ENTIRE CODEBASE, NOT JUST ONE FILE. 
+
+2. **Performance Optimization**:
+   - Implement efficient algorithms for large codebases
+   - Use worker threads for background processing
+
+3. **3D Visualization Layout**:
+   - Develop force-directed graph algorithms for intuitive layout
+   - Balance detail and clarity in the visualization
+
+4. **Vulnerability Pattern Matching**:
+   - Create flexible pattern matching that minimizes false positives
+   - Implement context-aware analysis for better accuracy
+
+Tree 
+.
+├── backend
+│   ├── analyzer.py
+│   ├── ast_generator.py
+│   ├── init_db.py
+│   ├── init_db.sql
+│   ├── language_detector.py
+│   ├── project_mapper.py
+│   ├── requirements.txt
+│   ├── tree-sitter-langs
+│   │   ├── build
+│   │   All languages here, removed to make it look better. All languages compiled here. 
+│   └── vulnerability_scanner.py
+├── docker-compose.yml
+├── Dockerfile
+├── LICENSE
+├── media
+│   ├── icons
+│   ├── main.css
+│   └── main.js
+├── node_modules
+├── package.json
+├── README.md
+├── run.sh
+├── src
+│   ├── analyzeCaller.ts
+│   ├── extension.ts
+│   └── visualizationPanel.ts
+├── tsconfig.json
+└── webpack.config.js
+
+backend/analyzer.py 
+import json
+import os
+import sys
+from ast_generator import generate_project_asts
+from vulnerability_scanner import scan_vulnerabilities
+from init_db import init_db  # DB Initialization
+
+# Environment Variables
+PROJECT_DIR = os.getenv("PROJECT_DIR", "/app/backend/test_project")  # Default path
+AST_OUTPUT = os.getenv("AST_OUTPUT", "/app/backend/ast_output.json")
+DB_PATH = os.getenv("DB_PATH", "/app/backend/vulnerabilities.db")
+
+def save_asts_to_json(ast_map, output_file):
+    """
+    Save ASTs to a JSON file in S-expression format.
+    """
+    try:
+        ast_dict = {file: ast.root_node.sexp() for file, ast in ast_map.items()}
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(ast_dict, f, indent=4)
+        print(f"\n✅ ASTs saved to {output_file}")
+    except Exception as e:
+        print(f"\n❌ Error saving ASTs: {e}", file=sys.stderr)
+
+def main():
+    print("\n🚀 Starting SCode Analysis...")
+
+    # 1️⃣ Initialize the Database (Automatically on Startup)
+    print("\n🔧 Initializing Database...")
+    try:
+        init_db()
+        print("✅ Database initialized successfully.")
+    except Exception as e:
+        print(f"❌ Database initialization failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # 2️⃣ Generate ASTs for the entire project
+    print("\n🌳 Generating ASTs for the Project...")
+    ast_map = generate_project_asts(PROJECT_DIR)
+
+    if not ast_map:
+        print("\n⚠️ No ASTs generated. Exiting...")
+        sys.exit(1)
+
+    # 3️⃣ Save ASTs to JSON (for inspection/debugging)
+    save_asts_to_json(ast_map, AST_OUTPUT)
+
+    # 4️⃣ Scan for vulnerabilities
+    print("\n🔍 Scanning for Vulnerabilities...")
+    try:
+        vulnerabilities = scan_vulnerabilities(ast_map)
+    except Exception as e:
+        print(f"❌ Vulnerability scanning failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # 5️⃣ Print Detected Vulnerabilities
+    if vulnerabilities:
+        print("\n🚨 Vulnerabilities Detected:")
+        for vuln in vulnerabilities:
+            print(json.dumps(vuln, indent=4))
+    else:
+        print("\n✅ No vulnerabilities detected.")
+
+if __name__ == "__main__":
+    main()
+
+backend/ast_generator.py 
+import os
+import tree_sitter
+from tree_sitter import Language, Parser
+from language_detector import detect_language, get_all_source_files
+
+# Path to the Tree-sitter languages
+TREE_SITTER_LIB = "/app/backend/tree-sitter-langs/build/my-languages.so"
+
+# Load parsers for all supported languages
+LANGUAGE_MAPPING = {
+    'python': 'python',
+    'javascript': 'javascript',
+    'typescript': 'typescript',
+    'java': 'java',
+    'cpp': 'cpp',
+    'c': 'c',
+    'go': 'go',
+    'ruby': 'ruby',
+    'php': 'php',
+    'c-sharp': 'c_sharp',
+    'rust': 'rust'
+}
+
+# Initialize parsers for all languages
+PARSERS = {}
+for lang, ts_lang in LANGUAGE_MAPPING.items():
+    PARSERS[lang] = Parser()
+    PARSERS[lang].set_language(Language(TREE_SITTER_LIB, ts_lang))
+
+def generate_ast(file_path, language):
+    """
+    Generates AST using Tree-sitter for a single file.
+    """
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        code = f.read()
+
+    if language not in PARSERS:
+        print(f"No parser for language: {language}")
+        return None
+
+    parser = PARSERS[language]
+    tree = parser.parse(bytes(code, "utf8"))
+    return tree
+
+def generate_project_asts(project_dir):
+    """
+    Generates ASTs for all files in the project directory.
+    Returns a dictionary: {file_path: AST}.
+    """
+    asts = {}
+    source_files = get_all_source_files(project_dir)
+
+    for file_path in source_files:
+        language = detect_language(file_path)
+        
+        if not language:
+            print(f"Skipping unsupported file: {file_path}")
+            continue
+
+        try:
+            ast = generate_ast(file_path, language)
+            if ast:
+                asts[file_path] = ast
+                print(f"Generated AST → {file_path}")
+            else:
+                print(f"Failed to parse → {file_path}")
+        except Exception as e:
+            print(f"Error generating AST for {file_path}: {e}")
+
+    return asts
+
+if __name__ == '__main__':
+    project_dir = '/app/backend/test_project'  # Example project directory
+    ast_map = generate_project_asts(project_dir)
+    
+    print(f"\nGenerated ASTs for {len(ast_map)} files.")
+
+bnackend/init_db.py 
+import sqlite3
+import os
+
+DB_PATH = '/app/backend/vulnerabilities.db'
+SQL_INIT_SCRIPT = '/app/backend/init_db.sql'
+
+def init_db():
+    """Initialize the SQLite database."""
+    if os.path.exists(DB_PATH):
+        print("Database already initialized.")
+        return
+
+    # Connect to SQLite DB
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Execute the schema and insert patterns
+    with open(SQL_INIT_SCRIPT, 'r') as f:
+        sql_script = f.read()
+
+    cursor.executescript(sql_script)
+    conn.commit()
+    conn.close()
+    print("Database initialized successfully!")
+
+if __name__ == '__main__':
+    init_db()
+backend/init_db.sql 
+-- Initialize the vulnerabilities database
+
+-- Drop tables if they exist
+DROP TABLE IF EXISTS vulnerability_patterns;
+DROP TABLE IF EXISTS cwe_references;
+
+-- Create table for vulnerability patterns
+CREATE TABLE vulnerability_patterns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    language TEXT NOT NULL,
+    pattern_type TEXT NOT NULL,
+    pattern TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    cwe_id TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create table for CWE references
+CREATE TABLE cwe_references (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cwe_id TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    url TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes
+CREATE INDEX idx_vulnerability_patterns_language ON vulnerability_patterns(language);
+CREATE INDEX idx_vulnerability_patterns_cwe_id ON vulnerability_patterns(cwe_id);
+CREATE INDEX idx_cwe_references_cwe_id ON cwe_references(cwe_id);
+
+-- Insert common vulnerability patterns for Python
+INSERT INTO vulnerability_patterns (language, pattern_type, pattern, name, description, severity, cwe_id)
+VALUES
+    ('python', 'regex', 'eval\\s*\\(', 'Use of eval()', 'Use of eval() can lead to code injection', 'high', 'CWE-95'),
+    ('python', 'regex', 'exec\\s*\\(', 'Use of exec()', 'Use of exec() can lead to code injection', 'high', 'CWE-95'),
+    ('python', 'regex', 'os\\.system\\s*\\(', 'Unsafe shell execution', 'Command injection vulnerability', 'high', 'CWE-78'),
+    ('python', 'regex', 'subprocess\\.call\\(.*shell\\s*=\\s*True', 'Unsafe subprocess', 'Command injection vulnerability', 'high', 'CWE-78');
+
+-- Insert common vulnerability patterns for JavaScript
+INSERT INTO vulnerability_patterns (language, pattern_type, pattern, name, description, severity, cwe_id)
+VALUES
+    ('javascript', 'regex', 'eval\\s*\\(', 'Use of eval()', 'Code injection vulnerability', 'high', 'CWE-95'),
+    ('javascript', 'regex', 'new\\s+Function\\s*\\(', 'Use of Function constructor', 'Code injection vulnerability', 'high', 'CWE-95'),
+    ('javascript', 'regex', 'document\\.write\\s*\\(', 'Use of document.write()', 'Potential XSS vulnerability', 'medium', 'CWE-79');
+
+backend/language_detector
+import os
+
+# Supported languages with their file extensions
+LANGUAGE_EXTENSIONS = {
+    '.py': 'python',
+    '.js': 'javascript',
+    '.ts': 'typescript',
+    '.java': 'java',
+    '.cpp': 'cpp',
+    '.c': 'c',
+    '.go': 'go',
+    '.rb': 'ruby',
+    '.php': 'php',
+    '.cs': 'c-sharp',
+    '.rs': 'rust'
+}
+
+def detect_language(file_path):
+    """
+    Detects the language based on the file extension.
+    """
+    _, ext = os.path.splitext(file_path)
+    return LANGUAGE_EXTENSIONS.get(ext.lower(), None)
+
+def get_all_source_files(root_dir):
+    """
+    Recursively finds all source code files based on supported extensions.
+    """
+    source_files = []
+    for root, _, files in os.walk(root_dir):
+        for file in files:
+            if any(file.endswith(ext) for ext in LANGUAGE_EXTENSIONS):
+                source_files.append(os.path.join(root, file))
+    return source_files
+
+if __name__ == '__main__':
+    project_dir = '/app/backend/test_project'  # Example path
+    files = get_all_source_files(project_dir)
+    for file in files:
+        lang = detect_language(file)
+        print(f"Detected {lang} → {file}")
+backend/project_mapper.py 
+import os
+
+def map_project_structure(root_dir):
+    """
+    Recursively maps the entire project structure.
+    Returns a list of file paths.
+    """
+    project_files = []
+    
+    for root, _, files in os.walk(root_dir):
+        for file in files:
+            project_files.append(os.path.join(root, file))
+    
+    return project_files
+
+if __name__ == "__main__":
+    project_dir = "/app/backend/test_project"  # Example path
+    files = map_project_structure(project_dir)
+    
+    print("\n📁 Mapped Project Files:")
+    for f in files:
+        print(f)
+requirements.txt
+flask
+flask-cors
+tree-sitter
+sqlite3
+jsonschema
+requests
+backend/vulnerability_scanner.py
+import sqlite3
+import re
+import json
+
+# Path to vulnerabilities DB
+DB_PATH = "/app/backend/vulnerabilities.db"
+
+def load_vulnerability_patterns():
+    """
+    Load vulnerability patterns from the SQLite database.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT language, pattern_type, pattern, name, description, severity FROM vulnerability_patterns")
+    
+    patterns = []
+    for row in cursor.fetchall():
+        patterns.append({
+            "language": row[0],
+            "type": row[1],
+            "pattern": row[2],
+            "name": row[3],
+            "description": row[4],
+            "severity": row[5],
+        })
+
+    conn.close()
+    return patterns
+
+def scan_vulnerabilities(ast_map):
+    """
+    Scans ASTs against vulnerability patterns.
+    Returns a list of detected vulnerabilities.
+    """
+    patterns = load_vulnerability_patterns()
+    vulnerabilities = []
+
+    for file_path, ast in ast_map.items():
+        file_lang = file_path.split('.')[-1]
+
+        for pattern in patterns:
+            if pattern['language'] == file_lang:
+                # Match pattern in AST S-expression
+                if re.search(pattern['pattern'], ast.root_node.sexp()):
+                    vulnerabilities.append({
+                        "file": file_path,
+                        "vulnerability": pattern['name'],
+                        "description": pattern['description'],
+                        "severity": pattern['severity']
+                    })
+
+    return vulnerabilities
+
+if __name__ == "__main__":
+    # Example usage
+    with open("/app/backend/ast_output.json", "r", encoding="utf-8") as f:
+        ast_map = json.load(f)
+
+    results = scan_vulnerabilities(ast_map)
+    print(json.dumps(results, indent=4))
+
+
+Now, root dir 
+# =========================================
+# STAGE 1: Backend (Python 3.10 Slim)
+# =========================================
+FROM python:3.10-slim AS backend
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# Copy backend code
+COPY backend /app/backend
+
+# Initialize DB
+RUN python /app/backend/init_db.py
+
+# =========================================
+# STAGE 2: Frontend (Node.js + TypeScript)
+# =========================================
+FROM node:20-slim AS frontend
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm install
+
+# Build frontend
+COPY src /app/src
+COPY media /app/media
+COPY tsconfig.json webpack.config.js ./
+RUN npm run build
+
+# =========================================
+# FINAL IMAGE: Combine Backend + Frontend
+# =========================================
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy backend + frontend artifacts
+COPY --from=backend /app /app
+COPY --from=frontend /app/dist /app/frontend
+
+EXPOSE 5000 8080
+
+# Start backend + frontend services
+CMD ["bash", "-c", "python /app/backend/analyzer.py & npx serve /app/frontend -l 8080"]
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app/backend
+    command: ["python", "/app/backend/analyzer.py"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./src:/app/src
+      - ./media:/app/media
+    command: ["npx", "serve", "/app/frontend", "-l", "8080"]

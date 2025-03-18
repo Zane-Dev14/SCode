@@ -1,0 +1,23 @@
+{
+    "name": "scode-plugin",
+    "version": "1.0.0",
+    "description": "Code analysis and visualization plugin",
+    "main": "dist/main.js",
+    "scripts": {
+      "start": "webpack serve --mode development --open",
+      "build": "webpack --mode production",
+      "test": "echo \"No tests specified\" && exit 0"
+    },
+    "dependencies": {
+      "three": "^0.156.0",
+      "serve": "^14.2.0"
+    },
+    "devDependencies": {
+      "typescript": "^5.2.2",
+      "ts-loader": "^9.4.2",
+      "webpack": "^5.89.0",
+      "webpack-cli": "^5.1.4",
+      "webpack-dev-server": "^4.15.1"
+    }
+  }
+  

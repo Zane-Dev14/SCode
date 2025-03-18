@@ -1,0 +1,6 @@
+flask
+flask-cors
+tree-sitter
+sqlite3
+jsonschema
+requests

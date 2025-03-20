@@ -1,0 +1,77 @@
+{
+    "type": "module",
+    "children": [
+        {
+            "type": "import_from_statement",
+            "children": [
+                {
+                    "type": "dotted_name",
+                    "children": [
+                        {
+                            "type": "identifier"
+                        }
+                    ]
+                },
+                {
+                    "type": "dotted_name",
+                    "children": [
+                        {
+                            "type": "identifier"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "expression_statement",
+            "children": [
+                {
+                    "type": "call",
+                    "children": [
+                        {
+                            "type": "identifier"
+                        },
+                        {
+                            "type": "argument_list"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "expression_statement",
+            "children": [
+                {
+                    "type": "call",
+                    "children": [
+                        {
+                            "type": "identifier"
+                        },
+                        {
+                            "type": "argument_list",
+                            "children": [
+                                {
+                                    "type": "string",
+                                    "children": [
+                                        {
+                                            "type": "string_start"
+                                        },
+                                        {
+                                            "type": "string_content"
+                                        },
+                                        {
+                                            "type": "string_end"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "comment"
+        }
+    ]
+}

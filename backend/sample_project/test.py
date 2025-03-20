@@ -1,3 +1,3 @@
 from main import fd 
 fd() 
-eval("print('hello')")  # Triggers a vulnerability
+exec("print('hedsadsallo')")  # Triggers a vulnerability

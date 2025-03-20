@@ -66,6 +66,9 @@
                                 }
                             ]
                         }
+                    ],
+                    "vulnerabilities": [
+                        "Vulnerable function used: exec"
                     ]
                 }
             ]

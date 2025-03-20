@@ -25,22 +25,22 @@ LANGUAGE_MAPPING = {
     'rust': rust_language()
 }
 
+# Initialize a set to keep track of parsed files
+parsed_files = set()
+
 def detect_vulnerabilities(node):
     vulnerabilities = []
-    if node.type == 'call_expression':
+    if node.type == 'call': 
         function_name = None
         for child in node.children:
             if child.type == 'identifier':
                 function_name = child.text.decode('utf-8')
                 break
-        
-        # Check if the function is a vulnerable one (e.g., eval, exec)
         if function_name in ['eval', 'exec', 'system', 'subprocess']:
+            print(function_name)
             vulnerabilities.append(f"Vulnerable function used: {function_name}")
-
-    # Add more patterns for other vulnerabilities (SQL injection, etc.) if needed
     return vulnerabilities
-# --- Improved AST conversion and saving ---
+
 def node_to_dict(node):
     """
     Recursively convert a Tree-sitter node to a dictionary containing only
@@ -49,14 +49,12 @@ def node_to_dict(node):
     """
     result = {
         "type": node.type,
-
     }
-
     # Only include named children (skipping punctuation, etc.)
     named_children = [child for child in node.children if child.is_named]
     if named_children:
         result["children"] = [node_to_dict(child) for child in named_children]
-        
+    
     # Check for vulnerabilities in the current node and add to result
     vulnerabilities = detect_vulnerabilities(node)
     if vulnerabilities:
@@ -64,51 +62,78 @@ def node_to_dict(node):
 
     return result
 
-def save_ast_to_file(tree, filename):
-    """Save the AST as a dictionary in a JSON file."""
-    ast_dict = node_to_dict(tree.root_node)
+def save_ast_to_file(ast_map, filename):
+    """Save the ASTs as a dictionary in a JSON file."""
     with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(ast_dict, f, indent=4)
-    print(f"✅ AST saved to {filename}")
+        json.dump(ast_map, f, indent=4)
+    print(f"✅ ASTs saved to {filename}")
 
-def generate_ast(file_path, language):
-    """Generate an AST for a given file and language."""
+def parse_file(file_path, language, ast_map):
+    """Parse a single file and add it to the AST map."""
     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         code = f.read()
     
     # Create a new Parser for the specified language.
     parser = Parser()
-    parser=Parser(Language(LANGUAGE_MAPPING[language]))
+    parser = Parser(Language(LANGUAGE_MAPPING[language]))
     tree = parser.parse(bytes(code, "utf8"))
     
-    # Save AST output to a designated file
-    output_filename = os.path.join('/app/backend/sample_project', 'ast_output.json')
-    save_ast_to_file(tree, output_filename)
-    
-    return tree
+    # Convert AST to dictionary and add to the map
+    ast_dict = node_to_dict(tree.root_node)
+    ast_map[file_path] = ast_dict
+
+    # Mark the file as parsed
+    parsed_files.add(file_path)
+
+    # Check for imports and parse them as well
+    find_and_parse_imports(file_path, code, ast_map)
+
+def find_and_parse_imports(file_path, code, ast_map):
+    """Find imports in the code and parse them if not already parsed."""
+    # Search for import statements and handle them (this is just for Python as an example)
+    # You can extend this to other languages.
+    import_statements = []
+    for line in code.splitlines():
+        if line.startswith('import ') or line.startswith('from '):
+            import_statements.append(line)
+
+    # Parse the files mentioned in import statements
+    for statement in import_statements:
+        # Extract the file/module being imported (very basic extraction, you can improve this)
+        if 'import' in statement:
+            imported_file = statement.split()[1]
+        elif 'from' in statement:
+            imported_file = statement.split()[1]
+
+        # Assuming the import refers to a filename without the extension (you may need to adjust this logic)
+        imported_file_path = f"{os.path.dirname(file_path)}/{imported_file}.py"
+        
+        if imported_file_path not in parsed_files and os.path.exists(imported_file_path):
+            print(f"Parsing imported file: {imported_file_path}")
+            parse_file(imported_file_path, detect_language(imported_file_path), ast_map)
 
 def generate_project_asts(project_dir):
     """Generate ASTs for all supported files in a project directory."""
-    asts = {}
+    ast_map = {}
     source_files = get_all_source_files(project_dir)
     
     for file_path in source_files:
-        lang = detect_language(file_path)
-        try:
-            ast = generate_ast(file_path, lang)
-            if ast:
-                asts[file_path] = ast
+        if file_path not in parsed_files:
+            try:
+                lang = detect_language(file_path)
+                parse_file(file_path, lang, ast_map)
                 print(f"Generated AST → {file_path}")
-            else:
-                print(f"Failed to parse → {file_path}")
-        except Exception as e:
-            print(f"Error generating AST for {file_path}: {e}")
-    return asts
+            except Exception as e:
+                print(f"Error generating AST for {file_path}: {e}")
+        else:
+            print(f"File {file_path} already parsed, skipping.")
+
+    # Save all the parsed ASTs
+    save_ast_to_file(ast_map, 'final_ast_output.json')
+
 project_dir = '/app/backend/sample_project'
-ast_map = generate_project_asts(project_dir)
-print(f"\nGenerated ASTs for {len(ast_map)} files.")
+generate_project_asts(project_dir)
 
 if __name__ == '__main__':
     project_dir = '/app/backend/test_project'
-    ast_map = generate_project_asts(project_dir)
-    print(f"\nGenerated ASTs for {len(ast_map)} files.")
+    generate_project_asts(project_dir)

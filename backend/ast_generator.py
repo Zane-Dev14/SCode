@@ -126,7 +126,7 @@ def generate_project_asts(project_dir, entrypoint_file):
     """Generate expanded AST for the entrypoint using all project ASTs."""
     # Step 1: Parse all files into unlinked ASTs
     ast_map, function_map = parse_all_files(project_dir)
-    
+    print(ast_map)
     # Step 2: Process the entrypoint AST
     main_ast = ast_map[entrypoint_file]
     expanded_asts = {}  # Cache of expanded ASTs by (start_point, end_point)
@@ -140,7 +140,7 @@ def generate_project_asts(project_dir, entrypoint_file):
                 "type": root_node.type,
                 "text": root_node.text.decode('utf-8')
             }
-    
+    print(ast_map_dict)
     # Step 4: Save the entire AST map
     save_ast_to_file(ast_map_dict, '/app/backend/sample_project/ast_output.json')
 
@@ -150,7 +150,7 @@ def save_ast_to_file(ast_map, filename):
         json.dump(ast_map, f, indent=4)
     print(f"✅ ASTs saved to {filename}")
 project_dir = '/app/backend/sample_project'
-entrypoint_file = os.path.join(project_dir, 'main.js')
+entrypoint_file = os.path.join(project_dir, 'main.py')
 generate_project_asts(project_dir, entrypoint_file)
 if __name__ == '__main__':
     project_dir = '/app/backend/test_project'

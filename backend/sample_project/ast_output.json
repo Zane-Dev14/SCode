@@ -26828,5 +26828,13 @@
                 ]
             }
         ]
+    },
+    "/app/backend/sample_project/new.py": {
+        "type": "module",
+        "text": "def idk(a,b,c):\n    print()"
+    },
+    "/app/backend/sample_project/test.py": {
+        "type": "module",
+        "text": "from new import idk\ndef fd():\n    exec(\"print('hedsadsallo')\")  # Triggers a vulnerability\n    idk(10,20,30)"
     }
 }

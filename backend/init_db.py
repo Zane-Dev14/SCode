@@ -1,8 +1,8 @@
 import sqlite3
 import os
 
-DB_PATH = '/app/backend/vulnerabilities.db'
-SQL_INIT_SCRIPT = '/app/backend/init_db.sql'
+DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(__file__), "vulnerabilities.db"))
+SQL_INIT_SCRIPT = os.getenv("SQL_INIT_SCRIPT", os.path.join(os.path.dirname(__file__), "init_db.sql"))
 
 def init_db():
     """Initialize the SQLite database."""

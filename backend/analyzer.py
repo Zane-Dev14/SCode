@@ -7,9 +7,9 @@ from init_db import init_db
 from logger import logger
 
 # Environment Variables
-PROJECT_DIR = os.getenv("PROJECT_DIR")  # Will be set by VSCode extension
-AST_OUTPUT = os.getenv("AST_OUTPUT", "/tmp/ast_output.json")
-DB_PATH = os.getenv("DB_PATH", "/app/backend/vulnerabilities.db")
+PROJECT_DIR = os.getenv("PROJECT_DIR")
+AST_OUTPUT = os.getenv("AST_OUTPUT", os.path.join(os.getcwd(), "ast_output.json"))  # Default to current dir
+DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(__file__), "vulnerabilities.db"))
 
 def save_asts_to_json(ast_map, output_file):
     """
@@ -22,7 +22,7 @@ def save_asts_to_json(ast_map, output_file):
             # Convert full AST to simplified structure for visualization
             simplified = {
                 "filepath": file,
-                "ast": ast.root_node.sexp(),
+                "ast": ast.root_node.sexp()[:1000],
                 "type": "file"
             }
             ast_dict[file] = simplified

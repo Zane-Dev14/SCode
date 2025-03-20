@@ -34,8 +34,7 @@ def analyze():
 def get_ast():
     """Get the AST for a specific file"""
     file_path = request.args.get('file')
-    ast_file = request.args.get('ast_file', os.getenv('AST_OUTPUT', '/tmp/ast_output.json'))
-    
+    ast_file = request.args.get('ast_file', os.getenv('AST_OUTPUT', os.path.join(os.getcwd(), "ast_output.json")))    
     if not file_path:
         return jsonify({"error": "No file specified"}), 400
     

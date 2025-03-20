@@ -1,0 +1,1271 @@
+.
+├── backend
+|   |__ Tree-sitter-langs(already compiled)
+│   ├── analyzer.py
+│   ├── api.py
+│   ├── ast_generator.py
+│   ├── init_db.py
+│   ├── init_db.sql
+│   ├── language_detector.py
+│   ├── logger.py
+│   ├── project_mapper.py
+│   └── vulnerability_scanner.py
+├── docker-compose.yml
+├── Dockerfile
+├── LICENSE
+├── media
+│   ├── icons
+│   ├── main.css
+│   └── main.js
+├── package.json
+├── README.md
+├── run.sh
+├── src
+│   ├── analyzeCaller.ts
+│   ├── extension.ts
+│   └── visualizationPanel.ts
+├── tsconfig.json
+└── webpack.config.js
+
+5 directories, 22 files
+
+
+Here is all my code, Analyze it. tell me if any major issues. Will this work and run? How to make it work. 
+
+import json
+import os
+import sys
+from ast_generator import generate_project_asts
+from vulnerability_scanner import scan_vulnerabilities
+from init_db import init_db
+from logger import logger
+
+# Environment Variables
+PROJECT_DIR = os.getenv("PROJECT_DIR")  # Will be set by VSCode extension
+AST_OUTPUT = os.getenv("AST_OUTPUT", "/tmp/ast_output.json")
+DB_PATH = os.getenv("DB_PATH", "/app/backend/vulnerabilities.db")
+
+def save_asts_to_json(ast_map, output_file):
+    """
+    Save ASTs to a JSON file in a format suitable for visualization.
+    """
+    try:
+        # Convert ASTs to a more serializable format
+        ast_dict = {}
+        for file, ast in ast_map.items():
+            # Convert full AST to simplified structure for visualization
+            simplified = {
+                "filepath": file,
+                "ast": ast.root_node.sexp(),
+                "type": "file"
+            }
+            ast_dict[file] = simplified
+            
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(ast_dict, f, indent=2)
+        logger.info(f"ASTs saved to {output_file}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving ASTs: {str(e)}")
+        return False
+
+def analyze_project(project_dir=None):
+    """
+    Analyze the project and return results.
+    Can be called directly from the VSCode extension.
+    """
+    if project_dir:
+        logger.info(f"Setting project directory to: {project_dir}")
+        global PROJECT_DIR
+        PROJECT_DIR = project_dir
+    
+    if not PROJECT_DIR:
+        logger.error("No project directory specified")
+        return {"error": "No project directory specified"}
+    
+    logger.info(f"Starting analysis on project: {PROJECT_DIR}")
+    
+    # Initialize database if needed
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {str(e)}")
+        return {"error": f"Database initialization failed: {str(e)}"}
+    
+    # Generate ASTs
+    logger.info("Generating ASTs for the project")
+    try:
+        ast_map = generate_project_asts(PROJECT_DIR)
+        logger.info(f"Generated ASTs for {len(ast_map)} files")
+    except Exception as e:
+        logger.error(f"AST generation failed: {str(e)}")
+        return {"error": f"AST generation failed: {str(e)}"}
+    
+    if not ast_map:
+        logger.warning("No ASTs generated")
+        return {"warning": "No ASTs generated"}
+    
+    # Save ASTs to JSON
+    if not save_asts_to_json(ast_map, AST_OUTPUT):
+        return {"error": "Failed to save ASTs"}
+    
+    # Scan for vulnerabilities
+    logger.info("Scanning for vulnerabilities")
+    try:
+        vulnerabilities = scan_vulnerabilities(ast_map)
+        logger.info(f"Found {len(vulnerabilities)} vulnerabilities")
+    except Exception as e:
+        logger.error(f"Vulnerability scanning failed: {str(e)}")
+        return {"error": f"Vulnerability scanning failed: {str(e)}"}
+    
+    # Return results
+    return {
+        "status": "success",
+        "ast_file": AST_OUTPUT,
+        "files_analyzed": len(ast_map),
+        "vulnerabilities": vulnerabilities
+    }
+
+def main():
+    """
+    Main function when run directly.
+    """
+    logger.info("Starting SCode Analysis")
+    
+    if not PROJECT_DIR:
+        logger.error("Environment variable PROJECT_DIR not set")
+        sys.exit(1)
+    
+    results = analyze_project()
+    
+    if "error" in results:
+        logger.error(results["error"])
+        sys.exit(1)
+    
+    logger.info("Analysis completed successfully")
+    print(json.dumps(results, indent=2))
+
+if __name__ == "__main__":
+    main()
+from flask import Flask, request, jsonify
+import os
+from analyzer import analyze_project
+from logger import logger
+
+app = Flask(__name__)
+
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    return jsonify({"status": "healthy"})
+
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    """Analyze a project"""
+    data = request.json
+    project_dir = data.get('project_dir')
+    
+    if not project_dir:
+        return jsonify({"error": "No project directory specified"}), 400
+    
+    # Ensure the directory exists
+    if not os.path.isdir(project_dir):
+        return jsonify({"error": f"Directory {project_dir} does not exist"}), 400
+    
+    logger.info(f"Received analyze request for {project_dir}")
+    
+    # Run analysis
+    result = analyze_project(project_dir)
+    
+    return jsonify(result)
+
+@app.route('/ast', methods=['GET'])
+def get_ast():
+    """Get the AST for a specific file"""
+    file_path = request.args.get('file')
+    ast_file = request.args.get('ast_file', os.getenv('AST_OUTPUT', '/tmp/ast_output.json'))
+    
+    if not file_path:
+        return jsonify({"error": "No file specified"}), 400
+    
+    if not os.path.exists(ast_file):
+        return jsonify({"error": "AST file not found"}), 404
+    
+    # Read the AST file
+    try:
+        import json
+        with open(ast_file, 'r') as f:
+            ast_data = json.load(f)
+        
+        # Return the AST for the specified file
+        if file_path in ast_data:
+            return jsonify(ast_data[file_path])
+        else:
+            return jsonify({"error": f"AST for {file_path} not found"}), 404
+    except Exception as e:
+        logger.error(f"Error reading AST file: {str(e)}")
+        return jsonify({"error": f"Error reading AST file: {str(e)}"}), 500
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+    import os
+import tree_sitter
+from tree_sitter import Language, Parser
+from language_detector import detect_language, get_all_source_files
+
+# Path to the Tree-sitter languages
+TREE_SITTER_LIB = "/app/backend/tree-sitter-langs/build/my-languages.so"
+
+# Load parsers for all supported languages
+LANGUAGE_MAPPING = {
+    'python': 'python',
+    'javascript': 'javascript',
+    'typescript': 'typescript',
+    'java': 'java',
+    'cpp': 'cpp',
+    'c': 'c',
+    'go': 'go',
+    'ruby': 'ruby',
+    'php': 'php',
+    'c-sharp': 'c_sharp',
+    'rust': 'rust'
+}
+
+# Initialize parsers for all languages
+PARSERS = {}
+for lang, ts_lang in LANGUAGE_MAPPING.items():
+    PARSERS[lang] = Parser()
+    PARSERS[lang].set_language(Language(TREE_SITTER_LIB, ts_lang))
+
+def generate_ast(file_path, language):
+    """
+    Generates AST using Tree-sitter for a single file.
+    """
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        code = f.read()
+
+    if language not in PARSERS:
+        print(f"No parser for language: {language}")
+        return None
+
+    parser = PARSERS[language]
+    tree = parser.parse(bytes(code, "utf8"))
+    return tree
+
+def generate_project_asts(project_dir):
+    """
+    Generates ASTs for all files in the project directory.
+    Returns a dictionary: {file_path: AST}.
+    """
+    asts = {}
+    source_files = get_all_source_files(project_dir)
+
+    for file_path in source_files:
+        language = detect_language(file_path)
+        
+        if not language:
+            print(f"Skipping unsupported file: {file_path}")
+            continue
+
+        try:
+            ast = generate_ast(file_path, language)
+            if ast:
+                asts[file_path] = ast
+                print(f"Generated AST → {file_path}")
+            else:
+                print(f"Failed to parse → {file_path}")
+        except Exception as e:
+            print(f"Error generating AST for {file_path}: {e}")
+
+    return asts
+
+if __name__ == '__main__':
+    project_dir = '/app/backend/test_project'  # Example project directory
+    ast_map = generate_project_asts(project_dir)
+    
+    print(f"\nGenerated ASTs for {len(ast_map)} files.")
+import sqlite3
+import os
+
+DB_PATH = '/app/backend/vulnerabilities.db'
+SQL_INIT_SCRIPT = '/app/backend/init_db.sql'
+
+def init_db():
+    """Initialize the SQLite database."""
+    if os.path.exists(DB_PATH):
+        print("Database already initialized.")
+        return
+
+    # Connect to SQLite DB
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Execute the schema and insert patterns
+    with open(SQL_INIT_SCRIPT, 'r') as f:
+        sql_script = f.read()
+
+    cursor.executescript(sql_script)
+    conn.commit()
+    conn.close()
+    print("Database initialized successfully!")
+
+if __name__ == '__main__':
+    init_db()
+-- Initialize the vulnerabilities database
+
+-- Drop tables if they exist
+DROP TABLE IF EXISTS vulnerability_patterns;
+DROP TABLE IF EXISTS cwe_references;
+
+-- Create table for vulnerability patterns
+CREATE TABLE vulnerability_patterns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    language TEXT NOT NULL,
+    pattern_type TEXT NOT NULL,
+    pattern TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    cwe_id TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create table for CWE references
+CREATE TABLE cwe_references (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cwe_id TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    url TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes
+CREATE INDEX idx_vulnerability_patterns_language ON vulnerability_patterns(language);
+CREATE INDEX idx_vulnerability_patterns_cwe_id ON vulnerability_patterns(cwe_id);
+CREATE INDEX idx_cwe_references_cwe_id ON cwe_references(cwe_id);
+
+-- Insert common vulnerability patterns for Python
+INSERT INTO vulnerability_patterns (language, pattern_type, pattern, name, description, severity, cwe_id)
+VALUES
+    ('python', 'regex', 'eval\\s*\\(', 'Use of eval()', 'Use of eval() can lead to code injection', 'high', 'CWE-95'),
+    ('python', 'regex', 'exec\\s*\\(', 'Use of exec()', 'Use of exec() can lead to code injection', 'high', 'CWE-95'),
+    ('python', 'regex', 'os\\.system\\s*\\(', 'Unsafe shell execution', 'Command injection vulnerability', 'high', 'CWE-78'),
+    ('python', 'regex', 'subprocess\\.call\\(.*shell\\s*=\\s*True', 'Unsafe subprocess', 'Command injection vulnerability', 'high', 'CWE-78');
+
+-- Insert common vulnerability patterns for JavaScript
+INSERT INTO vulnerability_patterns (language, pattern_type, pattern, name, description, severity, cwe_id)
+VALUES
+    ('javascript', 'regex', 'eval\\s*\\(', 'Use of eval()', 'Code injection vulnerability', 'high', 'CWE-95'),
+    ('javascript', 'regex', 'new\\s+Function\\s*\\(', 'Use of Function constructor', 'Code injection vulnerability', 'high', 'CWE-95'),
+    ('javascript', 'regex', 'document\\.write\\s*\\(', 'Use of document.write()', 'Potential XSS vulnerability', 'medium', 'CWE-79');
+import os
+
+# Supported languages with their file extensions
+LANGUAGE_EXTENSIONS = {
+    '.py': 'python',
+    '.js': 'javascript',
+    '.ts': 'typescript',
+    '.java': 'java',
+    '.cpp': 'cpp',
+    '.c': 'c',
+    '.go': 'go',
+    '.rb': 'ruby',
+    '.php': 'php',
+    '.cs': 'c-sharp',
+    '.rs': 'rust'
+}
+
+def detect_language(file_path):
+    """
+    Detects the language based on the file extension.
+    """
+    _, ext = os.path.splitext(file_path)
+    return LANGUAGE_EXTENSIONS.get(ext.lower(), None)
+
+def get_all_source_files(root_dir):
+    """
+    Recursively finds all source code files based on supported extensions.
+    """
+    source_files = []
+    for root, _, files in os.walk(root_dir):
+        for file in files:
+            if any(file.endswith(ext) for ext in LANGUAGE_EXTENSIONS):
+                source_files.append(os.path.join(root, file))
+    return source_files
+
+if __name__ == '__main__':
+    project_dir = '/app/backend/test_project'  # Example path
+    files = get_all_source_files(project_dir)
+    for file in files:
+        lang = detect_language(file)
+        print(f"Detected {lang} → {file}")
+import logging
+import os
+import sys
+from datetime import datetime
+
+def setup_logger(log_level=logging.INFO):
+    """
+    Setup logger with proper formatting and log level.
+    Returns a configured logger instance.
+    """
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Log file with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join(log_dir, f'scode_analyzer_{timestamp}.log')
+    
+    # Configure logger
+    logger = logging.getLogger('scode_analyzer')
+    logger.setLevel(log_level)
+    
+    # Create handlers
+    file_handler = logging.FileHandler(log_file)
+    console_handler = logging.StreamHandler(sys.stdout)
+    
+    # Create formatter and add it to handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # Add handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+# Global logger instance
+logger = setup_logger()import os
+
+def map_project_structure(root_dir):
+    """
+    Recursively maps the entire project structure.
+    Returns a list of file paths.
+    """
+    project_files = []
+    
+    for root, _, files in os.walk(root_dir):
+        for file in files:
+            project_files.append(os.path.join(root, file))
+    
+    return project_files
+
+if __name__ == "__main__":
+    project_dir = "/app/backend/test_project"  # Example path
+    files = map_project_structure(project_dir)
+    
+    print("\n📁 Mapped Project Files:")
+    for f in files:
+        print(f)
+flask
+flask-cors
+tree-sitter
+sqlite3
+jsonschema
+requests
+import sqlite3
+import re
+import json
+
+# Path to vulnerabilities DB
+DB_PATH = "/app/backend/vulnerabilities.db"
+
+def load_vulnerability_patterns():
+    """
+    Load vulnerability patterns from the SQLite database.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT language, pattern_type, pattern, name, description, severity FROM vulnerability_patterns")
+    
+    patterns = []
+    for row in cursor.fetchall():
+        patterns.append({
+            "language": row[0],
+            "type": row[1],
+            "pattern": row[2],
+            "name": row[3],
+            "description": row[4],
+            "severity": row[5],
+        })
+
+    conn.close()
+    return patterns
+
+def scan_vulnerabilities(ast_map):
+    """
+    Scans ASTs against vulnerability patterns.
+    Returns a list of detected vulnerabilities.
+    """
+    patterns = load_vulnerability_patterns()
+    vulnerabilities = []
+
+    for file_path, ast in ast_map.items():
+        file_lang = file_path.split('.')[-1]
+
+        for pattern in patterns:
+            if pattern['language'] == file_lang:
+                # Match pattern in AST S-expression
+                if re.search(pattern['pattern'], ast.root_node.sexp()):
+                    vulnerabilities.append({
+                        "file": file_path,
+                        "vulnerability": pattern['name'],
+                        "description": pattern['description'],
+                        "severity": pattern['severity']
+                    })
+
+    return vulnerabilities
+
+if __name__ == "__main__":
+    # Example usage
+    with open("/app/backend/ast_output.json", "r", encoding="utf-8") as f:
+        ast_map = json.load(f)
+
+    results = scan_vulnerabilities(ast_map)
+    print(json.dumps(results, indent=4))
+/* main.css */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f3f3f3;
+}
+
+.container {
+    padding: 20px;
+    max-width: 100%;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    max-width: 400px;
+}
+
+.stat-item {
+    background-color: #fff;
+    padding: 10px 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex: 1;
+    margin-right: 10px;
+}
+
+.stat-item:last-child {
+    margin-right: 0;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #666;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+.tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.tab-button {
+    padding: 10px 20px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #666;
+    outline: none;
+}
+
+.tab-button.active {
+    color: #0078d7;
+    border-bottom: 2px solid #0078d7;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+#3d-container {
+    width: 100%;
+    height: 600px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.vulnerabilities-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.vulnerabilities-table th,// main.js
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize tab switching
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.getAttribute('data-tab');
+            
+            // Deactivate all tabs
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Activate the selected tab
+            button.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            // If visualization tab is selected, initialize or resize the visualization
+            if (tabName === 'visualization' && astData) {
+                if (!window.visualization) {
+                    initVisualization();
+                } else {
+                    window.visualization.resize();
+                }
+            }
+        });
+    });
+    
+    // Add event listeners for file links
+    const fileLinks = document.querySelectorAll('.file-link');
+    fileLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const file = link.getAttribute('data-file');
+            vscode.postMessage({
+                command: 'openFile',
+                file: file,
+                line: 0 // Default to line 0
+            });
+        });
+    });
+    
+    // Initialize visualization if we have AST data
+    if (astData) {
+        initVisualization();
+    }
+});
+
+function initVisualization() {
+    // Get the container element
+    const container = document.getElementById('3d-container');
+    
+    // Create a scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0);
+    
+    // Create a camera
+    const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.z = 15;
+    
+    // Create a renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+    
+    // Add orbit controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.25;
+    
+    // Create a graph layout
+    const graph = createGraph(astData);
+    
+    // Add the graph to the scene
+    scene.add(graph);
+    
+    // Add lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(1, 1, 1);
+    scene.add(directionalLight);
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+    
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    
+    animate();
+    
+    // Store the visualization components
+    window.visualization = {
+        scene: scene,
+        camera: camera,
+        renderer: renderer,
+        controls: controls,
+        resize: () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+    };
+}
+
+function createGraph(astData) {
+    // Create a group to hold all the graph elements
+    const graphGroup = new THREE.Group();
+    
+    // Create a simple force-directed layout
+    const nodes = [];
+    const links = [];
+    
+    // Process the AST data
+    const files = Object.keys(astData);
+    
+    // Create nodes for each file
+    files.forEach((file, index) => {
+        const node = {
+            id: file,
+            type: 'file',
+            x: (Math.random() - 0.5) * 10,
+            y: (Math.random() - 0.5) * 10,
+            z: (Math.random() - 0.5) * 10
+        };
+        nodes.push(node);
+    });
+    
+    // Create file nodes
+    nodes.forEach(node => {
+        let mesh;
+        
+        if (node.type === 'file') {
+            // Create a sphere for files
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const material = new THREE.MeshPhongMaterial({ color: 0x3366ff });
+            mesh = new THREE.Mesh(geometry, material);
+        } else {
+            // Default node type
+            const geometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+            const material = new THREE.MeshPhongMaterial({ color: 0xffa500 });
+            mesh = new THREE.Mesh(geometry, material);
+        }
+        
+        mesh.position.set(node.x, node.y, node.z);
+        mesh.userData = { id: node.id, type: node.type };
+        graphGroup.add(mesh);
+        
+        // Add text label
+        const fileName = node.id.split('/').pop();
+        const textSprite = createTextSprite(fileName);
+        textSprite.position.set(node.x, node.y - 0.7, node.z);
+        graphGroup.add(textSprite);
+    });
+    
+    // Create links between nodes if there are relationships
+    links.forEach(link => {
+        const sourceNode = nodes.find(n => n.id === link.source);
+        const targetNode = nodes.find(n => n.id === link.target);
+        
+        if (sourceNode && targetNode) {
+            const points = [
+                new THREE.Vector3(sourceNode.x, sourceNode.y, sourceNode.z),
+                new THREE.Vector3(targetNode.x, targetNode.y, targetNode.z)
+            ];
+            
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: 0x999999 });
+            const line = new THREE.Line(geometry, material);
+            graphGroup.add(line);
+        }
+    });
+    
+    return graphGroup;
+}
+
+function createTextSprite(text) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 64;
+    
+    context.font = '24px Arial';
+    context.fillStyle = 'rgba(0, 0, 0, 1.0)';
+    context.fillText(text, 0, 48);
+    
+    const texture = new THREE.Texture(canvas);
+    texture.needsUpdate = true;
+    
+    const material = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(2, 0.5, 1);
+    
+    return sprite;
+}
+
+Now frontend
+extensions 
+import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+import { exec } from 'child_process';
+import { VisualizationPanel } from './visualizationPanel';
+
+export function activate(context: vscode.ExtensionContext) {
+    console.log('SCode Analyzer extension is now active!');
+
+    // Register command to analyze workspace
+    let analyzeCommand = vscode.commands.registerCommand('scode.analyzeWorkspace', async () => {
+        // Get workspace folder
+        if (!vscode.workspace.workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder open. Please open a folder first.');
+            return;
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'SCode Analyzer',
+            cancellable: true
+        }, async (progress, token) => {
+            progress.report({ message: 'Scanning project...' });
+            
+            try {
+                // Run analysis
+                const result = await runAnalysis(workspaceFolder);
+                
+                if (result.error) {
+                    vscode.window.showErrorMessage(`Analysis failed: ${result.error}`);
+                    return;
+                }
+                
+                progress.report({ message: 'Generating visualization...' });
+                
+                // Create or show visualization panel
+                VisualizationPanel.createOrShow(context.extensionUri, result);
+                
+                vscode.window.showInformationMessage(
+                    `Analysis complete! Found ${result.vulnerabilities.length} potential vulnerabilities.`
+                );
+            } catch (error) {
+                vscode.window.showErrorMessage(`Error: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        });
+    });
+
+    context.subscriptions.push(analyzeCommand);
+}
+
+/**
+ * Run the analysis on the given workspace folder
+ */
+async function runAnalysis(workspacePath: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        // Set environment variables
+        const env = Object.assign({}, process.env, {
+            PROJECT_DIR: workspacePath,
+            AST_OUTPUT: path.join(workspacePath, '.scode_ast_output.json')
+        });
+
+        // Run the analyzer script
+        exec('python /app/backend/analyzer.py', { env }, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Analyzer error: ${error.message}`);
+                console.error(`Stderr: ${stderr}`);
+                reject(new Error(`Analysis failed: ${stderr || error.message}`));
+                return;
+            }
+            
+            try {
+                const result = JSON.parse(stdout);
+                resolve(result);
+            } catch (e) {
+                reject(new Error(`Failed to parse analyzer output: ${e instanceof Error ? e.message : String(e)}`));
+            }
+        });
+    });
+}
+
+export function deactivate() {}
+
+VisualizationPanel
+import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+
+export class VisualizationPanel {
+    public static currentPanel: VisualizationPanel | undefined;
+    private readonly _panel: vscode.WebviewPanel;
+    private readonly _extensionUri: vscode.Uri;
+    private _disposables: vscode.Disposable[] = [];
+
+    public static createOrShow(extensionUri: vscode.Uri, analysisResult: any) {
+        const column = vscode.window.activeTextEditor
+            ? vscode.window.activeTextEditor.viewColumn
+            : undefined;
+
+        // If we already have a panel, show it
+        if (VisualizationPanel.currentPanel) {
+            VisualizationPanel.currentPanel._panel.reveal(column);
+            VisualizationPanel.currentPanel._update(analysisResult);
+            return;
+        }
+
+        // Otherwise, create a new panel
+        const panel = vscode.window.createWebviewPanel(
+            'scodeVisualization',
+            'SCode Analyzer Visualization',
+            column || vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                localResourceRoots: [
+                    vscode.Uri.joinPath(extensionUri, 'media')
+                ]
+            }
+        );
+
+        VisualizationPanel.currentPanel = new VisualizationPanel(panel, extensionUri);
+        VisualizationPanel.currentPanel._update(analysisResult);
+    }
+
+    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+        this._panel = panel;
+        this._extensionUri = extensionUri;
+
+        // Set the webview's initial html content
+        this._update({ status: 'loading' });
+
+        // Listen for when the panel is disposed
+        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // Handle messages from the webview
+        this._panel.webview.onDidReceiveMessage(
+            message => {
+                switch (message.command) {
+                    case 'alert':
+                        vscode.window.showErrorMessage(message.text);
+                        return;
+                    case 'openFile':
+                        this._openFile(message.file, message.line);
+                        return;
+                }
+            },
+            null,
+            this._disposables
+        );
+    }
+
+    private _openFile(filePath: string, line: number) {
+        vscode.workspace.openTextDocument(filePath).then(document => {
+            vscode.window.showTextDocument(document).then(editor => {
+                const range = new vscode.Range(line, 0, line, 0);
+                editor.revealRange(range);
+                editor.selection = new vscode.Selection(range.start, range.end);
+            });
+        });
+    }
+
+    public dispose() {
+        VisualizationPanel.currentPanel = undefined;
+
+        // Clean up our resources
+        this._panel.dispose();
+
+        while (this._disposables.length) {
+            const x = this._disposables.pop();
+            if (x) {
+                x.dispose();
+            }
+        }
+    }
+
+    private _update(analysisResult: any) {
+        const webview = this._panel.webview;
+        this._panel.title = 'SCode Analyzer Visualization';
+        this._panel.webview.html = this._getHtmlForWebview(webview, analysisResult);
+    }
+
+    private _getHtmlForWebview(webview: vscode.Webview, analysisResult: any) {
+        // Local path to main script run in the webview
+        const scriptPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js');
+        const scriptUri = webview.asWebviewUri(scriptPathOnDisk);
+
+        // Local path to css styles
+        const stylePathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'main.css');
+        const styleUri = webview.asWebviewUri(stylePathOnDisk);
+
+        // Use a nonce to only allow specific scripts to be run
+        const nonce = getNonce();
+
+        // Read the AST data if available
+        let astData = null;
+        if (analysisResult.ast_file && fs.existsSync(analysisResult.ast_file)) {
+            try {
+                astData = JSON.parse(fs.readFileSync(analysisResult.ast_file, 'utf8'));
+            } catch (e) {
+                console.error(`Error reading AST file: ${e}`);
+            }
+        }
+
+        return `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>SCode Analyzer Visualization</title>
+            <link href="${styleUri}" rel="stylesheet">
+            <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+            <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.0.0/d3.min.js"></script>
+        </head>
+        <body>
+            <div class="container">
+                <h1>SCode Analyzer Results</h1>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Files Analyzed:</span>
+                        <span class="stat-value">${analysisResult.files_analyzed || 0}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Vulnerabilities Found:</span>
+                        <span class="stat-value">${analysisResult.vulnerabilities?.length || 0}</span>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-button active" data-tab="visualization">3D Visualization</button>
+                    <button class="tab-button" data-tab="vulnerabilities">Vulnerabilities</button>
+                </div>
+
+                <div class="tab-content active" id="visualization">
+                    <div id="3d-container"></div>
+                </div>
+
+                <div class="tab-content" id="vulnerabilities">
+                    <table class="vulnerabilities-table">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Vulnerability</th>
+                                <th>Description</th>
+                                <th>Severity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${analysisResult.vulnerabilities?.map(vuln => `
+                                <tr class="vulnerability-row severity-${vuln.severity}">
+                                    <td class="file-cell">
+                                        <a href="#" class="file-link" data-file="${vuln.file}">${path.basename(vuln.file)}</a>
+                                    </td>
+                                    <td>${vuln.vulnerability}</td>
+                                    <td>${vuln.description}</td>
+                                    <td>${vuln.severity}</td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="4">No vulnerabilities found</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <script nonce="${nonce}">
+                const vscode = acquireVsCodeApi();
+                const vulnerabilitiesData = ${JSON.stringify(analysisResult.vulnerabilities || [])};
+                const astData = ${astData ? JSON.stringify(astData) : 'null'};
+            </script>
+            <script nonce="${nonce}" src="${scriptUri}"></script>
+        </body>
+        </html>`;
+    }
+}
+
+function getNonce() {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+}
+
+Now root 
+version: '3.8'
+
+services:
+  scode-analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app/backend
+      - ./src:/app/src
+      - ./media:/app/media
+      # Important: Mount the workspace directory for analysis
+      - ${WORKSPACE_DIR:-./sample_project}:/workspace
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=/app/backend/api.py
+      - FLASK_DEBUG=1
+      - PROJECT_DIR=/workspace
+      - AST_OUTPUT=/workspace/.scode_ast_output.json
+    # Keep container running
+    tty: true
+    # Healthcheck to ensure the service is running
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+# =========================================
+# STAGE 1: Backend (Python 3.10 Slim)
+# =========================================
+FROM python:3.10-slim AS backend
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# Copy backend code
+COPY backend /app/backend
+
+# Initialize DB
+RUN python /app/backend/init_db.py
+
+# =========================================
+# STAGE 2: Frontend (Node.js + TypeScript)
+# =========================================
+FROM node:20-slim AS frontend
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm install
+
+# Build frontend
+COPY src /app/src
+COPY media /app/media
+COPY tsconfig.json webpack.config.js ./
+RUN npm run build
+
+# =========================================
+# FINAL IMAGE: Combine Backend + Frontend
+# =========================================
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy backend + frontend artifacts
+COPY --from=backend /app /app
+COPY --from=frontend /app/dist /app/frontend
+
+EXPOSE 5000 8080
+
+# Start backend + frontend services
+CMD ["bash", "-c", "python /app/backend/analyzer.py & npx serve /app/frontend -l 8080"]
+{
+    "name": "scode-plugin",
+    "version": "1.0.0",
+    "description": "Code analysis and visualization plugin",
+    "main": "dist/main.js",
+    "scripts": {
+      "start": "webpack serve --mode development --open",
+      "build": "webpack --mode production",
+      "test": "echo \"No tests specified\" && exit 0"
+    },
+    "dependencies": {
+      "three": "^0.156.0",
+      "serve": "^14.2.0"
+    },
+    "devDependencies": {
+      "typescript": "^5.2.2",
+      "ts-loader": "^9.4.2",
+      "webpack": "^5.89.0",
+      "webpack-cli": "^5.1.4",
+      "webpack-dev-server": "^4.15.1"
+    }
+  }
+  {
+    "compilerOptions": {
+      "target": "ES6",
+      "module": "CommonJS",
+      "strict": true,
+      "esModuleInterop": true,
+      "outDir": "./dist",
+      "rootDir": "./src",
+      "sourceMap": true,
+      "skipLibCheck": true,
+      "resolveJsonModule": true
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules"]
+  }
+  const path = require('path');
+
+module.exports = {
+  mode: 'production',
+  entry: './src/extension.ts',
+  output: {
+    filename: 'main.js',
+    path: path.resolve(__dirname, 'dist')
+  },
+  resolve: {
+    extensions: ['.ts', '.js']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        use: 'ts-loader',
+        exclude: /node_modules/
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
+      }
+    ]
+  },
+  devServer: {
+    static: './dist',
+    compress: true,
+    port: 8080
+  }
+};

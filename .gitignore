@@ -130,3 +130,4 @@ dist
 .pnp.*
 backend/sample_project/ast_output.json
 /backend/sample_project
+/backend/Clearch

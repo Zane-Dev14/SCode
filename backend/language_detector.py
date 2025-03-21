@@ -12,7 +12,7 @@ LANGUAGE_EXTENSIONS = {
     '.rb': 'ruby',
     '.php': 'php',
     '.cs': 'c-sharp',
-    '.rs': 'rust'
+    '.rs': 'rust',
 }
 
 def detect_language(file_path):

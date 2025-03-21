@@ -10,6 +10,7 @@ from tree_sitter_go import language as go_language
 from tree_sitter_ruby import language as ruby_language
 from tree_sitter_c_sharp import language as csharp_language
 from tree_sitter_rust import language as rust_language
+
 from language_detector import detect_language
 
 # Map language names to Tree-sitter language objects
@@ -22,7 +23,8 @@ LANGUAGE_MAPPING = {
     'go': go_language(),
     'ruby': ruby_language(),
     'c-sharp': csharp_language(),
-    'rust': rust_language()
+    'rust': rust_language(),
+    # 'typescript':ts_language()
 }
 
 def parse_all_files(project_dir):
@@ -149,8 +151,8 @@ def save_ast_to_file(ast_map, filename):
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(ast_map, f, indent=4)
     print(f"✅ ASTs saved to {filename}")
-project_dir = '/app/backend/sample_project'
-entrypoint_file = os.path.join(project_dir, 'main.py')
+project_dir = '/app/backend/Clearch/src'
+entrypoint_file = os.path.join(project_dir, 'main.rs')
 generate_project_asts(project_dir, entrypoint_file)
 if __name__ == '__main__':
     project_dir = '/app/backend/test_project'

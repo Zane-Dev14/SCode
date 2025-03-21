@@ -92,7 +92,7 @@ def node_to_dict(node, function_map, expanded_asts, visited=None):
     """Convert node to dict, expanding function calls recursively with cycle prevention."""
     if visited is None:
         visited = set()
-    result = {"type": node.type}
+    result = {"type": node.type,"Text":node.text.decode("utf-8")}
     named_children = [child for child in node.children if child.is_named]
     if named_children:
         result["children"] = []

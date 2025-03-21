@@ -1,21 +1,27 @@
 {
     "/app/backend/Clearch/src/main.rs": {
         "type": "source_file",
+        "Text": "// src/main.rs\nuse std::process;\nuse clap::Parser;\nuse sys_info::{linux_os_release, os_release, os_type};\nuse llms::gpt::GPT4Model;\n\nmod traits;\nmod llms;\n\n#[derive(Parser)]\n#[command(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)]\nstruct Gemini {\n    #[arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")]\n    search_query: Option<String>,\n}\n\n#[tokio::main]\nasync fn main() {\n    // Retrieve OS information\n    let os_type = os_type().unwrap_or_else(|_| \"Unknown\".to_string());\n    let os_release = os_release().unwrap_or_else(|_| \"Unknown\".to_string());\n    let linux_distro = linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string());\n\n    println!(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    );\n\n    // Parse command line arguments\n    let search = Gemini::parse();\n\n    // Initialize the GPT-4 model with a hardcoded API key\n    let gpt_model = GPT4Model::new();\n\n    if let Some(query) = search.search_query {\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    } else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }\n}\n",
         "children": [
             {
-                "type": "line_comment"
+                "type": "line_comment",
+                "Text": "// src/main.rs"
             },
             {
                 "type": "use_declaration",
+                "Text": "use std::process;",
                 "children": [
                     {
                         "type": "scoped_identifier",
+                        "Text": "std::process",
                         "children": [
                             {
-                                "type": "identifier"
+                                "type": "identifier",
+                                "Text": "std"
                             },
                             {
-                                "type": "identifier"
+                                "type": "identifier",
+                                "Text": "process"
                             }
                         ]
                     }
@@ -23,15 +29,19 @@
             },
             {
                 "type": "use_declaration",
+                "Text": "use clap::Parser;",
                 "children": [
                     {
                         "type": "scoped_identifier",
+                        "Text": "clap::Parser",
                         "children": [
                             {
-                                "type": "identifier"
+                                "type": "identifier",
+                                "Text": "clap"
                             },
                             {
-                                "type": "identifier"
+                                "type": "identifier",
+                                "Text": "Parser"
                             }
                         ]
                     }
@@ -39,24 +49,31 @@
             },
             {
                 "type": "use_declaration",
+                "Text": "use sys_info::{linux_os_release, os_release, os_type};",
                 "children": [
                     {
                         "type": "scoped_use_list",
+                        "Text": "sys_info::{linux_os_release, os_release, os_type}",
                         "children": [
                             {
-                                "type": "identifier"
+                                "type": "identifier",
+                                "Text": "sys_info"
                             },
                             {
                                 "type": "use_list",
+                                "Text": "{linux_os_release, os_release, os_type}",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "linux_os_release"
                                     },
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "os_release"
                                     },
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "os_type"
                                     }
                                 ]
                             }
@@ -66,23 +83,29 @@
             },
             {
                 "type": "use_declaration",
+                "Text": "use llms::gpt::GPT4Model;",
                 "children": [
                     {
                         "type": "scoped_identifier",
+                        "Text": "llms::gpt::GPT4Model",
                         "children": [
                             {
                                 "type": "scoped_identifier",
+                                "Text": "llms::gpt",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "llms"
                                     },
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "gpt"
                                     }
                                 ]
                             },
                             {
-                                "type": "identifier"
+                                "type": "identifier",
+                                "Text": "GPT4Model"
                             }
                         ]
                     }
@@ -90,34 +113,43 @@
             },
             {
                 "type": "mod_item",
+                "Text": "mod traits;",
                 "children": [
                     {
-                        "type": "identifier"
+                        "type": "identifier",
+                        "Text": "traits"
                     }
                 ]
             },
             {
                 "type": "mod_item",
+                "Text": "mod llms;",
                 "children": [
                     {
-                        "type": "identifier"
+                        "type": "identifier",
+                        "Text": "llms"
                     }
                 ]
             },
             {
                 "type": "attribute_item",
+                "Text": "#[derive(Parser)]",
                 "children": [
                     {
                         "type": "attribute",
+                        "Text": "derive(Parser)",
                         "children": [
                             {
-                                "type": "identifier"
+                                "type": "identifier",
+                                "Text": "derive"
                             },
                             {
                                 "type": "token_tree",
+                                "Text": "(Parser)",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "Parser"
                                     }
                                 ]
                             }
@@ -127,105 +159,137 @@
             },
             {
                 "type": "attribute_item",
+                "Text": "#[command(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)]",
                 "children": [
                     {
                         "type": "attribute",
+                        "Text": "command(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)",
                         "children": [
                             {
-                                "type": "identifier"
+                                "type": "identifier",
+                                "Text": "command"
                             },
                             {
                                 "type": "token_tree",
+                                "Text": "(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "name"
                                     },
                                     {
                                         "type": "string_literal",
+                                        "Text": "\"Clearch\"",
                                         "children": [
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": "Clearch"
                                             }
                                         ]
                                     },
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "author"
                                     },
                                     {
                                         "type": "string_literal",
+                                        "Text": "\"Advaith Narayanan <advaith@glitchy.systems>\"",
                                         "children": [
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": "Advaith Narayanan <advaith@glitchy.systems>"
                                             }
                                         ]
                                     },
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "about"
                                     },
                                     {
                                         "type": "string_literal",
+                                        "Text": "\"Search using the command line\"",
                                         "children": [
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": "Search using the command line"
                                             }
                                         ]
                                     },
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "after_help"
                                     },
                                     {
                                         "type": "string_literal",
+                                        "Text": "\"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"",
                                         "children": [
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": "Note: To redirect errors to stdout, use 2>&1."
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\n"
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\\n"
                                             },
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": "Example usages:"
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\n"
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\\n"
                                             },
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": "- Provide a search query: clearch -q "
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\\""
                                             },
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": "search term"
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\\""
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\n"
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\\n"
                                             },
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": "- Redirect errors: clearch -q "
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\\""
                                             },
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": "search term"
                                             },
                                             {
-                                                "type": "escape_sequence"
+                                                "type": "escape_sequence",
+                                                "Text": "\\\""
                                             },
                                             {
-                                                "type": "string_content"
+                                                "type": "string_content",
+                                                "Text": " 2>&1"
                                             }
                                         ]
                                     }
@@ -237,50 +301,65 @@
             },
             {
                 "type": "struct_item",
+                "Text": "struct Gemini {\n    #[arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")]\n    search_query: Option<String>,\n}",
                 "children": [
                     {
-                        "type": "type_identifier"
+                        "type": "type_identifier",
+                        "Text": "Gemini"
                     },
                     {
                         "type": "field_declaration_list",
+                        "Text": "{\n    #[arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")]\n    search_query: Option<String>,\n}",
                         "children": [
                             {
                                 "type": "attribute_item",
+                                "Text": "#[arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")]",
                                 "children": [
                                     {
                                         "type": "attribute",
+                                        "Text": "arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")",
                                         "children": [
                                             {
-                                                "type": "identifier"
+                                                "type": "identifier",
+                                                "Text": "arg"
                                             },
                                             {
                                                 "type": "token_tree",
+                                                "Text": "(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")",
                                                 "children": [
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "short"
                                                     },
                                                     {
-                                                        "type": "char_literal"
+                                                        "type": "char_literal",
+                                                        "Text": "'q'"
                                                     },
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "long"
                                                     },
                                                     {
                                                         "type": "string_literal",
+                                                        "Text": "\"specify\"",
                                                         "children": [
                                                             {
-                                                                "type": "string_content"
+                                                                "type": "string_content",
+                                                                "Text": "specify"
                                                             }
                                                         ]
                                                     },
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "help"
                                                     },
                                                     {
                                                         "type": "string_literal",
+                                                        "Text": "\"Specify the search query to perform\"",
                                                         "children": [
                                                             {
-                                                                "type": "string_content"
+                                                                "type": "string_content",
+                                                                "Text": "Specify the search query to perform"
                                                             }
                                                         ]
                                                     }
@@ -292,21 +371,27 @@
                             },
                             {
                                 "type": "field_declaration",
+                                "Text": "search_query: Option<String>",
                                 "children": [
                                     {
-                                        "type": "field_identifier"
+                                        "type": "field_identifier",
+                                        "Text": "search_query"
                                     },
                                     {
                                         "type": "generic_type",
+                                        "Text": "Option<String>",
                                         "children": [
                                             {
-                                                "type": "type_identifier"
+                                                "type": "type_identifier",
+                                                "Text": "Option"
                                             },
                                             {
                                                 "type": "type_arguments",
+                                                "Text": "<String>",
                                                 "children": [
                                                     {
-                                                        "type": "type_identifier"
+                                                        "type": "type_identifier",
+                                                        "Text": "String"
                                                     }
                                                 ]
                                             }
@@ -320,18 +405,23 @@
             },
             {
                 "type": "attribute_item",
+                "Text": "#[tokio::main]",
                 "children": [
                     {
                         "type": "attribute",
+                        "Text": "tokio::main",
                         "children": [
                             {
                                 "type": "scoped_identifier",
+                                "Text": "tokio::main",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "tokio"
                                     },
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "main"
                                     }
                                 ]
                             }
@@ -341,80 +431,103 @@
             },
             {
                 "type": "function_item",
+                "Text": "async fn main() {\n    // Retrieve OS information\n    let os_type = os_type().unwrap_or_else(|_| \"Unknown\".to_string());\n    let os_release = os_release().unwrap_or_else(|_| \"Unknown\".to_string());\n    let linux_distro = linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string());\n\n    println!(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    );\n\n    // Parse command line arguments\n    let search = Gemini::parse();\n\n    // Initialize the GPT-4 model with a hardcoded API key\n    let gpt_model = GPT4Model::new();\n\n    if let Some(query) = search.search_query {\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    } else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }\n}",
                 "children": [
                     {
-                        "type": "function_modifiers"
+                        "type": "function_modifiers",
+                        "Text": "async"
                     },
                     {
-                        "type": "identifier"
+                        "type": "identifier",
+                        "Text": "main"
                     },
                     {
-                        "type": "parameters"
+                        "type": "parameters",
+                        "Text": "()"
                     },
                     {
                         "type": "block",
+                        "Text": "{\n    // Retrieve OS information\n    let os_type = os_type().unwrap_or_else(|_| \"Unknown\".to_string());\n    let os_release = os_release().unwrap_or_else(|_| \"Unknown\".to_string());\n    let linux_distro = linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string());\n\n    println!(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    );\n\n    // Parse command line arguments\n    let search = Gemini::parse();\n\n    // Initialize the GPT-4 model with a hardcoded API key\n    let gpt_model = GPT4Model::new();\n\n    if let Some(query) = search.search_query {\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    } else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }\n}",
                         "children": [
                             {
-                                "type": "line_comment"
+                                "type": "line_comment",
+                                "Text": "// Retrieve OS information"
                             },
                             {
                                 "type": "let_declaration",
+                                "Text": "let os_type = os_type().unwrap_or_else(|_| \"Unknown\".to_string());",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "os_type"
                                     },
                                     {
                                         "type": "call_expression",
+                                        "Text": "os_type().unwrap_or_else(|_| \"Unknown\".to_string())",
                                         "children": [
                                             {
                                                 "type": "field_expression",
+                                                "Text": "os_type().unwrap_or_else",
                                                 "children": [
                                                     {
                                                         "type": "call_expression",
+                                                        "Text": "os_type()",
                                                         "children": [
                                                             {
-                                                                "type": "identifier"
+                                                                "type": "identifier",
+                                                                "Text": "os_type"
                                                             },
                                                             {
-                                                                "type": "arguments"
+                                                                "type": "arguments",
+                                                                "Text": "()"
                                                             }
                                                         ]
                                                     },
                                                     {
-                                                        "type": "field_identifier"
+                                                        "type": "field_identifier",
+                                                        "Text": "unwrap_or_else"
                                                     }
                                                 ]
                                             },
                                             {
                                                 "type": "arguments",
+                                                "Text": "(|_| \"Unknown\".to_string())",
                                                 "children": [
                                                     {
                                                         "type": "closure_expression",
+                                                        "Text": "|_| \"Unknown\".to_string()",
                                                         "children": [
                                                             {
-                                                                "type": "closure_parameters"
+                                                                "type": "closure_parameters",
+                                                                "Text": "|_|"
                                                             },
                                                             {
                                                                 "type": "call_expression",
+                                                                "Text": "\"Unknown\".to_string()",
                                                                 "children": [
                                                                     {
                                                                         "type": "field_expression",
+                                                                        "Text": "\"Unknown\".to_string",
                                                                         "children": [
                                                                             {
                                                                                 "type": "string_literal",
+                                                                                "Text": "\"Unknown\"",
                                                                                 "children": [
                                                                                     {
-                                                                                        "type": "string_content"
+                                                                                        "type": "string_content",
+                                                                                        "Text": "Unknown"
                                                                                     }
                                                                                 ]
                                                                             },
                                                                             {
-                                                                                "type": "field_identifier"
+                                                                                "type": "field_identifier",
+                                                                                "Text": "to_string"
                                                                             }
                                                                         ]
                                                                     },
                                                                     {
-                                                                        "type": "arguments"
+                                                                        "type": "arguments",
+                                                                        "Text": "()"
                                                                     }
                                                                 ]
                                                             }
@@ -428,62 +541,79 @@
                             },
                             {
                                 "type": "let_declaration",
+                                "Text": "let os_release = os_release().unwrap_or_else(|_| \"Unknown\".to_string());",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "os_release"
                                     },
                                     {
                                         "type": "call_expression",
+                                        "Text": "os_release().unwrap_or_else(|_| \"Unknown\".to_string())",
                                         "children": [
                                             {
                                                 "type": "field_expression",
+                                                "Text": "os_release().unwrap_or_else",
                                                 "children": [
                                                     {
                                                         "type": "call_expression",
+                                                        "Text": "os_release()",
                                                         "children": [
                                                             {
-                                                                "type": "identifier"
+                                                                "type": "identifier",
+                                                                "Text": "os_release"
                                                             },
                                                             {
-                                                                "type": "arguments"
+                                                                "type": "arguments",
+                                                                "Text": "()"
                                                             }
                                                         ]
                                                     },
                                                     {
-                                                        "type": "field_identifier"
+                                                        "type": "field_identifier",
+                                                        "Text": "unwrap_or_else"
                                                     }
                                                 ]
                                             },
                                             {
                                                 "type": "arguments",
+                                                "Text": "(|_| \"Unknown\".to_string())",
                                                 "children": [
                                                     {
                                                         "type": "closure_expression",
+                                                        "Text": "|_| \"Unknown\".to_string()",
                                                         "children": [
                                                             {
-                                                                "type": "closure_parameters"
+                                                                "type": "closure_parameters",
+                                                                "Text": "|_|"
                                                             },
                                                             {
                                                                 "type": "call_expression",
+                                                                "Text": "\"Unknown\".to_string()",
                                                                 "children": [
                                                                     {
                                                                         "type": "field_expression",
+                                                                        "Text": "\"Unknown\".to_string",
                                                                         "children": [
                                                                             {
                                                                                 "type": "string_literal",
+                                                                                "Text": "\"Unknown\"",
                                                                                 "children": [
                                                                                     {
-                                                                                        "type": "string_content"
+                                                                                        "type": "string_content",
+                                                                                        "Text": "Unknown"
                                                                                     }
                                                                                 ]
                                                                             },
                                                                             {
-                                                                                "type": "field_identifier"
+                                                                                "type": "field_identifier",
+                                                                                "Text": "to_string"
                                                                             }
                                                                         ]
                                                                     },
                                                                     {
-                                                                        "type": "arguments"
+                                                                        "type": "arguments",
+                                                                        "Text": "()"
                                                                     }
                                                                 ]
                                                             }
@@ -497,66 +627,85 @@
                             },
                             {
                                 "type": "let_declaration",
+                                "Text": "let linux_distro = linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string());",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "linux_distro"
                                     },
                                     {
                                         "type": "call_expression",
+                                        "Text": "linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string())",
                                         "children": [
                                             {
                                                 "type": "field_expression",
+                                                "Text": "linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else",
                                                 "children": [
                                                     {
                                                         "type": "call_expression",
+                                                        "Text": "linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)",
                                                         "children": [
                                                             {
                                                                 "type": "field_expression",
+                                                                "Text": "linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or",
                                                                 "children": [
                                                                     {
                                                                         "type": "call_expression",
+                                                                        "Text": "linux_os_release()\n    .map(|info| info.pretty_name)",
                                                                         "children": [
                                                                             {
                                                                                 "type": "field_expression",
+                                                                                "Text": "linux_os_release()\n    .map",
                                                                                 "children": [
                                                                                     {
                                                                                         "type": "call_expression",
+                                                                                        "Text": "linux_os_release()",
                                                                                         "children": [
                                                                                             {
-                                                                                                "type": "identifier"
+                                                                                                "type": "identifier",
+                                                                                                "Text": "linux_os_release"
                                                                                             },
                                                                                             {
-                                                                                                "type": "arguments"
+                                                                                                "type": "arguments",
+                                                                                                "Text": "()"
                                                                                             }
                                                                                         ]
                                                                                     },
                                                                                     {
-                                                                                        "type": "field_identifier"
+                                                                                        "type": "field_identifier",
+                                                                                        "Text": "map"
                                                                                     }
                                                                                 ]
                                                                             },
                                                                             {
                                                                                 "type": "arguments",
+                                                                                "Text": "(|info| info.pretty_name)",
                                                                                 "children": [
                                                                                     {
                                                                                         "type": "closure_expression",
+                                                                                        "Text": "|info| info.pretty_name",
                                                                                         "children": [
                                                                                             {
                                                                                                 "type": "closure_parameters",
+                                                                                                "Text": "|info|",
                                                                                                 "children": [
                                                                                                     {
-                                                                                                        "type": "identifier"
+                                                                                                        "type": "identifier",
+                                                                                                        "Text": "info"
                                                                                                     }
                                                                                                 ]
                                                                                             },
                                                                                             {
                                                                                                 "type": "field_expression",
+                                                                                                "Text": "info.pretty_name",
                                                                                                 "children": [
                                                                                                     {
-                                                                                                        "type": "identifier"
+                                                                                                        "type": "identifier",
+                                                                                                        "Text": "info"
                                                                                                     },
                                                                                                     {
-                                                                                                        "type": "field_identifier"
+                                                                                                        "type": "field_identifier",
+                                                                                                        "Text": "pretty_name"
                                                                                                     }
                                                                                                 ]
                                                                                             }
@@ -567,55 +716,68 @@
                                                                         ]
                                                                     },
                                                                     {
-                                                                        "type": "field_identifier"
+                                                                        "type": "field_identifier",
+                                                                        "Text": "unwrap_or"
                                                                     }
                                                                 ]
                                                             },
                                                             {
                                                                 "type": "arguments",
+                                                                "Text": "(None)",
                                                                 "children": [
                                                                     {
-                                                                        "type": "identifier"
+                                                                        "type": "identifier",
+                                                                        "Text": "None"
                                                                     }
                                                                 ]
                                                             }
                                                         ]
                                                     },
                                                     {
-                                                        "type": "field_identifier"
+                                                        "type": "field_identifier",
+                                                        "Text": "unwrap_or_else"
                                                     }
                                                 ]
                                             },
                                             {
                                                 "type": "arguments",
+                                                "Text": "(|| \"Unknown\".to_string())",
                                                 "children": [
                                                     {
                                                         "type": "closure_expression",
+                                                        "Text": "|| \"Unknown\".to_string()",
                                                         "children": [
                                                             {
-                                                                "type": "closure_parameters"
+                                                                "type": "closure_parameters",
+                                                                "Text": "||"
                                                             },
                                                             {
                                                                 "type": "call_expression",
+                                                                "Text": "\"Unknown\".to_string()",
                                                                 "children": [
                                                                     {
                                                                         "type": "field_expression",
+                                                                        "Text": "\"Unknown\".to_string",
                                                                         "children": [
                                                                             {
                                                                                 "type": "string_literal",
+                                                                                "Text": "\"Unknown\"",
                                                                                 "children": [
                                                                                     {
-                                                                                        "type": "string_content"
+                                                                                        "type": "string_content",
+                                                                                        "Text": "Unknown"
                                                                                     }
                                                                                 ]
                                                                             },
                                                                             {
-                                                                                "type": "field_identifier"
+                                                                                "type": "field_identifier",
+                                                                                "Text": "to_string"
                                                                             }
                                                                         ]
                                                                     },
                                                                     {
-                                                                        "type": "arguments"
+                                                                        "type": "arguments",
+                                                                        "Text": "()"
                                                                     }
                                                                 ]
                                                             }
@@ -629,32 +791,41 @@
                             },
                             {
                                 "type": "expression_statement",
+                                "Text": "println!(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    );",
                                 "children": [
                                     {
                                         "type": "macro_invocation",
+                                        "Text": "println!(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    )",
                                         "children": [
                                             {
-                                                "type": "identifier"
+                                                "type": "identifier",
+                                                "Text": "println"
                                             },
                                             {
                                                 "type": "token_tree",
+                                                "Text": "(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    )",
                                                 "children": [
                                                     {
                                                         "type": "string_literal",
+                                                        "Text": "\"OS: {}  OS REL: {} Linux: {}\"",
                                                         "children": [
                                                             {
-                                                                "type": "string_content"
+                                                                "type": "string_content",
+                                                                "Text": "OS: {}  OS REL: {} Linux: {}"
                                                             }
                                                         ]
                                                     },
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "os_type"
                                                     },
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "os_release"
                                                     },
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "linux_distro"
                                                     }
                                                 ]
                                             }
@@ -663,60 +834,76 @@
                                 ]
                             },
                             {
-                                "type": "line_comment"
+                                "type": "line_comment",
+                                "Text": "// Parse command line arguments"
                             },
                             {
                                 "type": "let_declaration",
+                                "Text": "let search = Gemini::parse();",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "search"
                                     },
                                     {
                                         "type": "call_expression",
+                                        "Text": "Gemini::parse()",
                                         "children": [
                                             {
                                                 "type": "scoped_identifier",
+                                                "Text": "Gemini::parse",
                                                 "children": [
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "Gemini"
                                                     },
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "parse"
                                                     }
                                                 ]
                                             },
                                             {
-                                                "type": "arguments"
+                                                "type": "arguments",
+                                                "Text": "()"
                                             }
                                         ]
                                     }
                                 ]
                             },
                             {
-                                "type": "line_comment"
+                                "type": "line_comment",
+                                "Text": "// Initialize the GPT-4 model with a hardcoded API key"
                             },
                             {
                                 "type": "let_declaration",
+                                "Text": "let gpt_model = GPT4Model::new();",
                                 "children": [
                                     {
-                                        "type": "identifier"
+                                        "type": "identifier",
+                                        "Text": "gpt_model"
                                     },
                                     {
                                         "type": "call_expression",
+                                        "Text": "GPT4Model::new()",
                                         "children": [
                                             {
                                                 "type": "scoped_identifier",
+                                                "Text": "GPT4Model::new",
                                                 "children": [
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "GPT4Model"
                                                     },
                                                     {
-                                                        "type": "identifier"
+                                                        "type": "identifier",
+                                                        "Text": "new"
                                                     }
                                                 ]
                                             },
                                             {
-                                                "type": "arguments"
+                                                "type": "arguments",
+                                                "Text": "()"
                                             }
                                         ]
                                     }
@@ -724,32 +911,41 @@
                             },
                             {
                                 "type": "expression_statement",
+                                "Text": "if let Some(query) = search.search_query {\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    } else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }",
                                 "children": [
                                     {
                                         "type": "if_expression",
+                                        "Text": "if let Some(query) = search.search_query {\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    } else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }",
                                         "children": [
                                             {
                                                 "type": "let_condition",
+                                                "Text": "let Some(query) = search.search_query",
                                                 "children": [
                                                     {
                                                         "type": "tuple_struct_pattern",
+                                                        "Text": "Some(query)",
                                                         "children": [
                                                             {
-                                                                "type": "identifier"
+                                                                "type": "identifier",
+                                                                "Text": "Some"
                                                             },
                                                             {
-                                                                "type": "identifier"
+                                                                "type": "identifier",
+                                                                "Text": "query"
                                                             }
                                                         ]
                                                     },
                                                     {
                                                         "type": "field_expression",
+                                                        "Text": "search.search_query",
                                                         "children": [
                                                             {
-                                                                "type": "identifier"
+                                                                "type": "identifier",
+                                                                "Text": "search"
                                                             },
                                                             {
-                                                                "type": "field_identifier"
+                                                                "type": "field_identifier",
+                                                                "Text": "search_query"
                                                             }
                                                         ]
                                                     }
@@ -757,29 +953,37 @@
                                             },
                                             {
                                                 "type": "block",
+                                                "Text": "{\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    }",
                                                 "children": [
                                                     {
                                                         "type": "expression_statement",
+                                                        "Text": "println!(\"Searching for: {}\", query);",
                                                         "children": [
                                                             {
                                                                 "type": "macro_invocation",
+                                                                "Text": "println!(\"Searching for: {}\", query)",
                                                                 "children": [
                                                                     {
-                                                                        "type": "identifier"
+                                                                        "type": "identifier",
+                                                                        "Text": "println"
                                                                     },
                                                                     {
                                                                         "type": "token_tree",
+                                                                        "Text": "(\"Searching for: {}\", query)",
                                                                         "children": [
                                                                             {
                                                                                 "type": "string_literal",
+                                                                                "Text": "\"Searching for: {}\"",
                                                                                 "children": [
                                                                                     {
-                                                                                        "type": "string_content"
+                                                                                        "type": "string_content",
+                                                                                        "Text": "Searching for: {}"
                                                                                     }
                                                                                 ]
                                                                             },
                                                                             {
-                                                                                "type": "identifier"
+                                                                                "type": "identifier",
+                                                                                "Text": "query"
                                                                             }
                                                                         ]
                                                                     }
@@ -788,39 +992,50 @@
                                                         ]
                                                     },
                                                     {
-                                                        "type": "line_comment"
+                                                        "type": "line_comment",
+                                                        "Text": "// Send the query to GPT-4"
                                                     },
                                                     {
                                                         "type": "expression_statement",
+                                                        "Text": "match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }",
                                                         "children": [
                                                             {
                                                                 "type": "match_expression",
+                                                                "Text": "match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }",
                                                                 "children": [
                                                                     {
                                                                         "type": "await_expression",
+                                                                        "Text": "gpt_model.req(&query).await",
                                                                         "children": [
                                                                             {
                                                                                 "type": "call_expression",
+                                                                                "Text": "gpt_model.req(&query)",
                                                                                 "children": [
                                                                                     {
                                                                                         "type": "field_expression",
+                                                                                        "Text": "gpt_model.req",
                                                                                         "children": [
                                                                                             {
-                                                                                                "type": "identifier"
+                                                                                                "type": "identifier",
+                                                                                                "Text": "gpt_model"
                                                                                             },
                                                                                             {
-                                                                                                "type": "field_identifier"
+                                                                                                "type": "field_identifier",
+                                                                                                "Text": "req"
                                                                                             }
                                                                                         ]
                                                                                     },
                                                                                     {
                                                                                         "type": "arguments",
+                                                                                        "Text": "(&query)",
                                                                                         "children": [
                                                                                             {
                                                                                                 "type": "reference_expression",
+                                                                                                "Text": "&query",
                                                                                                 "children": [
                                                                                                     {
-                                                                                                        "type": "identifier"
+                                                                                                        "type": "identifier",
+                                                                                                        "Text": "query"
                                                                                                     }
                                                                                                 ]
                                                                                             }
@@ -832,21 +1047,27 @@
                                                                     },
                                                                     {
                                                                         "type": "match_block",
+                                                                        "Text": "{\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }",
                                                                         "children": [
                                                                             {
                                                                                 "type": "match_arm",
+                                                                                "Text": "Ok(response) => println!(\"Response: {}\", response),",
                                                                                 "children": [
                                                                                     {
                                                                                         "type": "match_pattern",
+                                                                                        "Text": "Ok(response)",
                                                                                         "children": [
                                                                                             {
                                                                                                 "type": "tuple_struct_pattern",
+                                                                                                "Text": "Ok(response)",
                                                                                                 "children": [
                                                                                                     {
-                                                                                                        "type": "identifier"
+                                                                                                        "type": "identifier",
+                                                                                                        "Text": "Ok"
                                                                                                     },
                                                                                                     {
-                                                                                                        "type": "identifier"
+                                                                                                        "type": "identifier",
+                                                                                                        "Text": "response"
                                                                                                     }
                                                                                                 ]
                                                                                             }
@@ -854,23 +1075,29 @@
                                                                                     },
                                                                                     {
                                                                                         "type": "macro_invocation",
+                                                                                        "Text": "println!(\"Response: {}\", response)",
                                                                                         "children": [
                                                                                             {
-                                                                                                "type": "identifier"
+                                                                                                "type": "identifier",
+                                                                                                "Text": "println"
                                                                                             },
                                                                                             {
                                                                                                 "type": "token_tree",
+                                                                                                "Text": "(\"Response: {}\", response)",
                                                                                                 "children": [
                                                                                                     {
                                                                                                         "type": "string_literal",
+                                                                                                        "Text": "\"Response: {}\"",
                                                                                                         "children": [
                                                                                                             {
-                                                                                                                "type": "string_content"
+                                                                                                                "type": "string_content",
+                                                                                                                "Text": "Response: {}"
                                                                                                             }
                                                                                                         ]
                                                                                                     },
                                                                                                     {
-                                                                                                        "type": "identifier"
+                                                                                                        "type": "identifier",
+                                                                                                        "Text": "response"
                                                                                                     }
                                                                                                 ]
                                                                                             }
@@ -880,18 +1107,23 @@
                                                                             },
                                                                             {
                                                                                 "type": "match_arm",
+                                                                                "Text": "Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }",
                                                                                 "children": [
                                                                                     {
                                                                                         "type": "match_pattern",
+                                                                                        "Text": "Err(e)",
                                                                                         "children": [
                                                                                             {
                                                                                                 "type": "tuple_struct_pattern",
+                                                                                                "Text": "Err(e)",
                                                                                                 "children": [
                                                                                                     {
-                                                                                                        "type": "identifier"
+                                                                                                        "type": "identifier",
+                                                                                                        "Text": "Err"
                                                                                                     },
                                                                                                     {
-                                                                                                        "type": "identifier"
+                                                                                                        "type": "identifier",
+                                                                                                        "Text": "e"
                                                                                                     }
                                                                                                 ]
                                                                                             }
@@ -899,29 +1131,37 @@
                                                                                     },
                                                                                     {
                                                                                         "type": "block",
+                                                                                        "Text": "{\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }",
                                                                                         "children": [
                                                                                             {
                                                                                                 "type": "expression_statement",
+                                                                                                "Text": "eprintln!(\"Error: {}\", e);",
                                                                                                 "children": [
                                                                                                     {
                                                                                                         "type": "macro_invocation",
+                                                                                                        "Text": "eprintln!(\"Error: {}\", e)",
                                                                                                         "children": [
                                                                                                             {
-                                                                                                                "type": "identifier"
+                                                                                                                "type": "identifier",
+                                                                                                                "Text": "eprintln"
                                                                                                             },
                                                                                                             {
                                                                                                                 "type": "token_tree",
+                                                                                                                "Text": "(\"Error: {}\", e)",
                                                                                                                 "children": [
                                                                                                                     {
                                                                                                                         "type": "string_literal",
+                                                                                                                        "Text": "\"Error: {}\"",
                                                                                                                         "children": [
                                                                                                                             {
-                                                                                                                                "type": "string_content"
+                                                                                                                                "type": "string_content",
+                                                                                                                                "Text": "Error: {}"
                                                                                                                             }
                                                                                                                         ]
                                                                                                                     },
                                                                                                                     {
-                                                                                                                        "type": "identifier"
+                                                                                                                        "type": "identifier",
+                                                                                                                        "Text": "e"
                                                                                                                     }
                                                                                                                 ]
                                                                                                             }
@@ -931,26 +1171,33 @@
                                                                                             },
                                                                                             {
                                                                                                 "type": "expression_statement",
+                                                                                                "Text": "process::exit(1);",
                                                                                                 "children": [
                                                                                                     {
                                                                                                         "type": "call_expression",
+                                                                                                        "Text": "process::exit(1)",
                                                                                                         "children": [
                                                                                                             {
                                                                                                                 "type": "scoped_identifier",
+                                                                                                                "Text": "process::exit",
                                                                                                                 "children": [
                                                                                                                     {
-                                                                                                                        "type": "identifier"
+                                                                                                                        "type": "identifier",
+                                                                                                                        "Text": "process"
                                                                                                                     },
                                                                                                                     {
-                                                                                                                        "type": "identifier"
+                                                                                                                        "type": "identifier",
+                                                                                                                        "Text": "exit"
                                                                                                                     }
                                                                                                                 ]
                                                                                                             },
                                                                                                             {
                                                                                                                 "type": "arguments",
+                                                                                                                "Text": "(1)",
                                                                                                                 "children": [
                                                                                                                     {
-                                                                                                                        "type": "integer_literal"
+                                                                                                                        "type": "integer_literal",
+                                                                                                                        "Text": "1"
                                                                                                                     }
                                                                                                                 ]
                                                                                                             }
@@ -972,27 +1219,35 @@
                                             },
                                             {
                                                 "type": "else_clause",
+                                                "Text": "else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }",
                                                 "children": [
                                                     {
                                                         "type": "block",
+                                                        "Text": "{\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }",
                                                         "children": [
                                                             {
                                                                 "type": "expression_statement",
+                                                                "Text": "eprintln!(\"Error: Please provide a search query using -q or --specify.\");",
                                                                 "children": [
                                                                     {
                                                                         "type": "macro_invocation",
+                                                                        "Text": "eprintln!(\"Error: Please provide a search query using -q or --specify.\")",
                                                                         "children": [
                                                                             {
-                                                                                "type": "identifier"
+                                                                                "type": "identifier",
+                                                                                "Text": "eprintln"
                                                                             },
                                                                             {
                                                                                 "type": "token_tree",
+                                                                                "Text": "(\"Error: Please provide a search query using -q or --specify.\")",
                                                                                 "children": [
                                                                                     {
                                                                                         "type": "string_literal",
+                                                                                        "Text": "\"Error: Please provide a search query using -q or --specify.\"",
                                                                                         "children": [
                                                                                             {
-                                                                                                "type": "string_content"
+                                                                                                "type": "string_content",
+                                                                                                "Text": "Error: Please provide a search query using -q or --specify."
                                                                                             }
                                                                                         ]
                                                                                     }
@@ -1004,26 +1259,33 @@
                                                             },
                                                             {
                                                                 "type": "expression_statement",
+                                                                "Text": "process::exit(1);",
                                                                 "children": [
                                                                     {
                                                                         "type": "call_expression",
+                                                                        "Text": "process::exit(1)",
                                                                         "children": [
                                                                             {
                                                                                 "type": "scoped_identifier",
+                                                                                "Text": "process::exit",
                                                                                 "children": [
                                                                                     {
-                                                                                        "type": "identifier"
+                                                                                        "type": "identifier",
+                                                                                        "Text": "process"
                                                                                     },
                                                                                     {
-                                                                                        "type": "identifier"
+                                                                                        "type": "identifier",
+                                                                                        "Text": "exit"
                                                                                     }
                                                                                 ]
                                                                             },
                                                                             {
                                                                                 "type": "arguments",
+                                                                                "Text": "(1)",
                                                                                 "children": [
                                                                                     {
-                                                                                        "type": "integer_literal"
+                                                                                        "type": "integer_literal",
+                                                                                        "Text": "1"
                                                                                     }
                                                                                 ]
                                                                             }

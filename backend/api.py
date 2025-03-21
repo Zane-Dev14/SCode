@@ -33,11 +33,8 @@ def analyze():
 @app.route('/ast', methods=['GET'])
 def get_ast():
     """Get the AST for a specific file"""
-    file_path = request.args.get('file')
-    ast_file = request.args.get('ast_file', os.getenv('AST_OUTPUT', os.path.join(os.getcwd(), "ast_output.json")))    
-    if not file_path:
-        return jsonify({"error": "No file specified"}), 400
-    
+    ast_file = "/app/backend/sample_project/ast_output.json"
+
     if not os.path.exists(ast_file):
         return jsonify({"error": "AST file not found"}), 404
     
@@ -48,10 +45,7 @@ def get_ast():
             ast_data = json.load(f)
         
         # Return the AST for the specified file
-        if file_path in ast_data:
-            return jsonify(ast_data[file_path])
-        else:
-            return jsonify({"error": f"AST for {file_path} not found"}), 404
+        return jsonify(ast_data)
     except Exception as e:
         logger.error(f"Error reading AST file: {str(e)}")
         return jsonify({"error": f"Error reading AST file: {str(e)}"}), 500

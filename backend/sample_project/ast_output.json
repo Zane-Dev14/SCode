@@ -1,151 +1,701 @@
 {
     "main_ast": {
-        "type": "module",
-        "Text": "from test import fd\nimport os\nfd()\nx=10\nprint(\"\")",
+        "type": "source_file",
+        "Text": "// src/main.rs\nuse std::process;\nuse clap::Parser;\nuse sys_info::{linux_os_release, os_release, os_type};\nuse llms::gpt::GPT4Model;\n\nmod traits;\nmod llms;\n\n#[derive(Parser)]\n#[command(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)]\nstruct Gemini {\n    #[arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")]\n    search_query: Option<String>,\n}\n\n#[tokio::main]\nasync fn main() {\n    // Retrieve OS information\n    let os_type = os_type().unwrap_or_else(|_| \"Unknown\".to_string());\n    let os_release = os_release().unwrap_or_else(|_| \"Unknown\".to_string());\n    let linux_distro = linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string());\n\n    println!(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    );\n\n    // Parse command line arguments\n    let search = Gemini::parse();\n\n    // Initialize the GPT-4 model with a hardcoded API key\n    let gpt_model = GPT4Model::new();\n\n    if let Some(query) = search.search_query {\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    } else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }\n}\n",
         "children": [
             {
-                "type": "import_from_statement",
-                "Text": "from test import fd",
+                "type": "use_declaration",
+                "Text": "use std::process;",
                 "children": [
                     {
-                        "type": "dotted_name",
-                        "Text": "test"
-                    },
-                    {
-                        "type": "dotted_name",
-                        "Text": "fd"
+                        "type": "scoped_identifier",
+                        "Text": "std::process",
+                        "children": [
+                            {
+                                "type": "identifier",
+                                "Text": "std"
+                            },
+                            {
+                                "type": "identifier",
+                                "Text": "process"
+                            }
+                        ]
                     }
                 ]
             },
             {
-                "type": "import_statement",
-                "Text": "import os",
+                "type": "use_declaration",
+                "Text": "use clap::Parser;",
                 "children": [
                     {
-                        "type": "dotted_name",
-                        "Text": "os"
+                        "type": "scoped_identifier",
+                        "Text": "clap::Parser",
+                        "children": [
+                            {
+                                "type": "identifier",
+                                "Text": "clap"
+                            },
+                            {
+                                "type": "identifier",
+                                "Text": "Parser"
+                            }
+                        ]
                     }
                 ]
             },
             {
-                "type": "call",
-                "Text": "fd()",
-                "source": {
-                    "file": "/app/backend/sample_project/main.py",
-                    "line": 3
-                },
-                "called_function": {
-                    "type": "function_definition",
-                    "Text": "def fd():\n    exec(\"print('hedsadsallo')\")  # Triggers a vulnerability\n    idk(10,20,30)",
-                    "source": {
-                        "file": "/app/backend/sample_project/test.py",
-                        "line": 2
-                    },
-                    "children": [
-                        {
-                            "type": "call",
-                            "Text": "exec(\"print('hedsadsallo')\")",
-                            "source": {
-                                "file": "/app/backend/sample_project/test.py",
-                                "line": 3
+                "type": "use_declaration",
+                "Text": "use sys_info::{linux_os_release, os_release, os_type};",
+                "children": [
+                    {
+                        "type": "scoped_use_list",
+                        "Text": "sys_info::{linux_os_release, os_release, os_type}",
+                        "children": [
+                            {
+                                "type": "identifier",
+                                "Text": "sys_info"
                             },
-                            "vulnerabilities": [
-                                "Vulnerable function used: exec"
-                            ]
-                        },
-                        {
-                            "type": "call",
-                            "Text": "idk(10,20,30)",
-                            "source": {
-                                "file": "/app/backend/sample_project/test.py",
-                                "line": 4
-                            },
-                            "called_function": {
-                                "type": "function_definition",
-                                "Text": "def idk(a,b,c):\n    print()\n    x=20\n    exec()",
-                                "source": {
-                                    "file": "/app/backend/sample_project/new.py",
-                                    "line": 2
-                                },
-                                "variables": {
-                                    "a": null,
-                                    "b": null,
-                                    "c": null
-                                },
+                            {
+                                "type": "use_list",
+                                "Text": "{linux_os_release, os_release, os_type}",
                                 "children": [
                                     {
-                                        "type": "call",
-                                        "Text": "print()",
-                                        "source": {
-                                            "file": "/app/backend/sample_project/new.py",
-                                            "line": 3
-                                        },
-                                        "is_library": true
+                                        "type": "identifier",
+                                        "Text": "linux_os_release"
                                     },
                                     {
-                                        "type": "assignment",
-                                        "Text": "x=20",
-                                        "source": {
-                                            "file": "/app/backend/sample_project/new.py",
-                                            "line": 4
-                                        },
-                                        "variables": {
-                                            "x": "20"
-                                        }
+                                        "type": "identifier",
+                                        "Text": "os_release"
                                     },
                                     {
-                                        "type": "call",
-                                        "Text": "exec()",
-                                        "source": {
-                                            "file": "/app/backend/sample_project/new.py",
-                                            "line": 5
-                                        },
-                                        "vulnerabilities": [
-                                            "Vulnerable function used: exec"
+                                        "type": "identifier",
+                                        "Text": "os_type"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "use_declaration",
+                "Text": "use llms::gpt::GPT4Model;",
+                "children": [
+                    {
+                        "type": "scoped_identifier",
+                        "Text": "llms::gpt::GPT4Model",
+                        "children": [
+                            {
+                                "type": "scoped_identifier",
+                                "Text": "llms::gpt",
+                                "children": [
+                                    {
+                                        "type": "identifier",
+                                        "Text": "llms"
+                                    },
+                                    {
+                                        "type": "identifier",
+                                        "Text": "gpt"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "identifier",
+                                "Text": "GPT4Model"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "mod_item",
+                "Text": "mod traits;",
+                "children": [
+                    {
+                        "type": "identifier",
+                        "Text": "traits"
+                    }
+                ]
+            },
+            {
+                "type": "mod_item",
+                "Text": "mod llms;",
+                "children": [
+                    {
+                        "type": "identifier",
+                        "Text": "llms"
+                    }
+                ]
+            },
+            {
+                "type": "attribute_item",
+                "Text": "#[derive(Parser)]",
+                "children": [
+                    {
+                        "type": "attribute",
+                        "Text": "derive(Parser)",
+                        "children": [
+                            {
+                                "type": "identifier",
+                                "Text": "derive"
+                            },
+                            {
+                                "type": "token_tree",
+                                "Text": "(Parser)",
+                                "children": [
+                                    {
+                                        "type": "identifier",
+                                        "Text": "Parser"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "attribute_item",
+                "Text": "#[command(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)]",
+                "children": [
+                    {
+                        "type": "attribute",
+                        "Text": "command(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)",
+                        "children": [
+                            {
+                                "type": "identifier",
+                                "Text": "command"
+                            },
+                            {
+                                "type": "token_tree",
+                                "Text": "(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)",
+                                "children": [
+                                    {
+                                        "type": "identifier",
+                                        "Text": "name"
+                                    },
+                                    {
+                                        "type": "string_literal",
+                                        "Text": "\"Clearch\""
+                                    },
+                                    {
+                                        "type": "identifier",
+                                        "Text": "author"
+                                    },
+                                    {
+                                        "type": "string_literal",
+                                        "Text": "\"Advaith Narayanan <advaith@glitchy.systems>\""
+                                    },
+                                    {
+                                        "type": "identifier",
+                                        "Text": "about"
+                                    },
+                                    {
+                                        "type": "string_literal",
+                                        "Text": "\"Search using the command line\""
+                                    },
+                                    {
+                                        "type": "identifier",
+                                        "Text": "after_help"
+                                    },
+                                    {
+                                        "type": "string_literal",
+                                        "Text": "\"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\""
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "struct_item",
+                "Text": "struct Gemini {\n    #[arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")]\n    search_query: Option<String>,\n}",
+                "children": [
+                    {
+                        "type": "type_identifier",
+                        "Text": "Gemini"
+                    },
+                    {
+                        "type": "field_declaration_list",
+                        "Text": "{\n    #[arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")]\n    search_query: Option<String>,\n}",
+                        "children": [
+                            {
+                                "type": "attribute_item",
+                                "Text": "#[arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")]",
+                                "children": [
+                                    {
+                                        "type": "attribute",
+                                        "Text": "arg(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")",
+                                        "children": [
+                                            {
+                                                "type": "identifier",
+                                                "Text": "arg"
+                                            },
+                                            {
+                                                "type": "token_tree",
+                                                "Text": "(short = 'q', long = \"specify\", help = \"Specify the search query to perform\")",
+                                                "children": [
+                                                    {
+                                                        "type": "identifier",
+                                                        "Text": "short"
+                                                    },
+                                                    {
+                                                        "type": "char_literal",
+                                                        "Text": "'q'"
+                                                    },
+                                                    {
+                                                        "type": "identifier",
+                                                        "Text": "long"
+                                                    },
+                                                    {
+                                                        "type": "string_literal",
+                                                        "Text": "\"specify\""
+                                                    },
+                                                    {
+                                                        "type": "identifier",
+                                                        "Text": "help"
+                                                    },
+                                                    {
+                                                        "type": "string_literal",
+                                                        "Text": "\"Specify the search query to perform\""
+                                                    }
+                                                ]
+                                            }
                                         ]
                                     }
-                                ],
-                                "id": "/app/backend/sample_project/new.py:idk:3"
+                                ]
+                            },
+                            {
+                                "type": "field_declaration",
+                                "Text": "search_query: Option<String>",
+                                "children": [
+                                    {
+                                        "type": "field_identifier",
+                                        "Text": "search_query"
+                                    },
+                                    {
+                                        "type": "generic_type",
+                                        "Text": "Option<String>",
+                                        "children": [
+                                            {
+                                                "type": "type_identifier",
+                                                "Text": "Option"
+                                            },
+                                            {
+                                                "type": "type_arguments",
+                                                "Text": "<String>",
+                                                "children": [
+                                                    {
+                                                        "type": "type_identifier",
+                                                        "Text": "String"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
                             }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "attribute_item",
+                "Text": "#[tokio::main]",
+                "children": [
+                    {
+                        "type": "attribute",
+                        "Text": "tokio::main",
+                        "children": [
+                            {
+                                "type": "scoped_identifier",
+                                "Text": "tokio::main",
+                                "children": [
+                                    {
+                                        "type": "identifier",
+                                        "Text": "tokio"
+                                    },
+                                    {
+                                        "type": "identifier",
+                                        "Text": "main"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "function_item",
+                "Text": "async fn main() {\n    // Retrieve OS information\n    let os_type = os_type().unwrap_or_else(|_| \"Unknown\".to_string());\n    let os_release = os_release().unwrap_or_else(|_| \"Unknown\".to_string());\n    let linux_distro = linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string());\n\n    println!(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    );\n\n    // Parse command line arguments\n    let search = Gemini::parse();\n\n    // Initialize the GPT-4 model with a hardcoded API key\n    let gpt_model = GPT4Model::new();\n\n    if let Some(query) = search.search_query {\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    } else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }\n}",
+                "source": {
+                    "file": "/app/backend/Clearch/src/main.rs",
+                    "line": 26
+                },
+                "children": [
+                    {
+                        "type": "let_declaration",
+                        "Text": "let os_type = os_type().unwrap_or_else(|_| \"Unknown\".to_string());",
+                        "source": {
+                            "file": "/app/backend/Clearch/src/main.rs",
+                            "line": 28
+                        },
+                        "variables": {
+                            "os_type": "os_type().unwrap_or_else(|_| \"Unknown\".to_string())"
                         }
-                    ],
-                    "id": "/app/backend/sample_project/test.py:fd:0"
-                }
-            },
-            {
-                "type": "assignment",
-                "Text": "x=10",
-                "source": {
-                    "file": "/app/backend/sample_project/main.py",
-                    "line": 4
-                },
-                "variables": {
-                    "x": "10"
-                }
-            },
-            {
-                "type": "call",
-                "Text": "print(\"\")",
-                "source": {
-                    "file": "/app/backend/sample_project/main.py",
-                    "line": 5
-                },
-                "is_library": true
+                    },
+                    {
+                        "type": "let_declaration",
+                        "Text": "let os_release = os_release().unwrap_or_else(|_| \"Unknown\".to_string());",
+                        "source": {
+                            "file": "/app/backend/Clearch/src/main.rs",
+                            "line": 29
+                        },
+                        "variables": {
+                            "os_release": "os_release().unwrap_or_else(|_| \"Unknown\".to_string())"
+                        }
+                    },
+                    {
+                        "type": "let_declaration",
+                        "Text": "let linux_distro = linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string());",
+                        "source": {
+                            "file": "/app/backend/Clearch/src/main.rs",
+                            "line": 30
+                        },
+                        "variables": {
+                            "linux_distro": "linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string())"
+                        }
+                    },
+                    {
+                        "type": "macro_invocation",
+                        "Text": "println!(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    )",
+                        "children": [
+                            {
+                                "type": "identifier",
+                                "Text": "println"
+                            },
+                            {
+                                "type": "token_tree",
+                                "Text": "(\n        \"OS: {}  OS REL: {} Linux: {}\",\n        os_type, os_release, linux_distro\n    )",
+                                "children": [
+                                    {
+                                        "type": "string_literal",
+                                        "Text": "\"OS: {}  OS REL: {} Linux: {}\""
+                                    },
+                                    {
+                                        "type": "identifier",
+                                        "Text": "os_type"
+                                    },
+                                    {
+                                        "type": "identifier",
+                                        "Text": "os_release"
+                                    },
+                                    {
+                                        "type": "identifier",
+                                        "Text": "linux_distro"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "let_declaration",
+                        "Text": "let search = Gemini::parse();",
+                        "source": {
+                            "file": "/app/backend/Clearch/src/main.rs",
+                            "line": 41
+                        },
+                        "variables": {
+                            "search": "Gemini::parse()"
+                        }
+                    },
+                    {
+                        "type": "let_declaration",
+                        "Text": "let gpt_model = GPT4Model::new();",
+                        "source": {
+                            "file": "/app/backend/Clearch/src/main.rs",
+                            "line": 44
+                        },
+                        "variables": {
+                            "gpt_model": "GPT4Model::new()"
+                        }
+                    },
+                    {
+                        "type": "if_expression",
+                        "Text": "if let Some(query) = search.search_query {\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    } else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }",
+                        "children": [
+                            {
+                                "type": "let_condition",
+                                "Text": "let Some(query) = search.search_query",
+                                "children": [
+                                    {
+                                        "type": "tuple_struct_pattern",
+                                        "Text": "Some(query)",
+                                        "children": [
+                                            {
+                                                "type": "identifier",
+                                                "Text": "Some"
+                                            },
+                                            {
+                                                "type": "identifier",
+                                                "Text": "query"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "field_expression",
+                                        "Text": "search.search_query",
+                                        "children": [
+                                            {
+                                                "type": "identifier",
+                                                "Text": "search"
+                                            },
+                                            {
+                                                "type": "field_identifier",
+                                                "Text": "search_query"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "block",
+                                "Text": "{\n        println!(\"Searching for: {}\", query);\n\n        // Send the query to GPT-4\n        match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }\n    }",
+                                "children": [
+                                    {
+                                        "type": "macro_invocation",
+                                        "Text": "println!(\"Searching for: {}\", query)",
+                                        "children": [
+                                            {
+                                                "type": "identifier",
+                                                "Text": "println"
+                                            },
+                                            {
+                                                "type": "token_tree",
+                                                "Text": "(\"Searching for: {}\", query)",
+                                                "children": [
+                                                    {
+                                                        "type": "string_literal",
+                                                        "Text": "\"Searching for: {}\""
+                                                    },
+                                                    {
+                                                        "type": "identifier",
+                                                        "Text": "query"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "match_expression",
+                                        "Text": "match gpt_model.req(&query).await {\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }",
+                                        "children": [
+                                            {
+                                                "type": "await_expression",
+                                                "Text": "gpt_model.req(&query).await",
+                                                "children": [
+                                                    {
+                                                        "type": "call_expression",
+                                                        "Text": "gpt_model.req(&query)",
+                                                        "source": {
+                                                            "file": "/app/backend/Clearch/src/main.rs",
+                                                            "line": 50
+                                                        },
+                                                        "is_library": true
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "match_block",
+                                                "Text": "{\n            Ok(response) => println!(\"Response: {}\", response),\n            Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }\n        }",
+                                                "children": [
+                                                    {
+                                                        "type": "match_arm",
+                                                        "Text": "Ok(response) => println!(\"Response: {}\", response),",
+                                                        "children": [
+                                                            {
+                                                                "type": "match_pattern",
+                                                                "Text": "Ok(response)",
+                                                                "children": [
+                                                                    {
+                                                                        "type": "tuple_struct_pattern",
+                                                                        "Text": "Ok(response)",
+                                                                        "children": [
+                                                                            {
+                                                                                "type": "identifier",
+                                                                                "Text": "Ok"
+                                                                            },
+                                                                            {
+                                                                                "type": "identifier",
+                                                                                "Text": "response"
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
+                                                                "type": "macro_invocation",
+                                                                "Text": "println!(\"Response: {}\", response)",
+                                                                "children": [
+                                                                    {
+                                                                        "type": "identifier",
+                                                                        "Text": "println"
+                                                                    },
+                                                                    {
+                                                                        "type": "token_tree",
+                                                                        "Text": "(\"Response: {}\", response)",
+                                                                        "children": [
+                                                                            {
+                                                                                "type": "string_literal",
+                                                                                "Text": "\"Response: {}\""
+                                                                            },
+                                                                            {
+                                                                                "type": "identifier",
+                                                                                "Text": "response"
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "match_arm",
+                                                        "Text": "Err(e) => {\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }",
+                                                        "children": [
+                                                            {
+                                                                "type": "match_pattern",
+                                                                "Text": "Err(e)",
+                                                                "children": [
+                                                                    {
+                                                                        "type": "tuple_struct_pattern",
+                                                                        "Text": "Err(e)",
+                                                                        "children": [
+                                                                            {
+                                                                                "type": "identifier",
+                                                                                "Text": "Err"
+                                                                            },
+                                                                            {
+                                                                                "type": "identifier",
+                                                                                "Text": "e"
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
+                                                                "type": "block",
+                                                                "Text": "{\n                eprintln!(\"Error: {}\", e);\n                process::exit(1);\n            }",
+                                                                "children": [
+                                                                    {
+                                                                        "type": "macro_invocation",
+                                                                        "Text": "eprintln!(\"Error: {}\", e)",
+                                                                        "children": [
+                                                                            {
+                                                                                "type": "identifier",
+                                                                                "Text": "eprintln"
+                                                                            },
+                                                                            {
+                                                                                "type": "token_tree",
+                                                                                "Text": "(\"Error: {}\", e)",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "type": "string_literal",
+                                                                                        "Text": "\"Error: {}\""
+                                                                                    },
+                                                                                    {
+                                                                                        "type": "identifier",
+                                                                                        "Text": "e"
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "type": "call_expression",
+                                                                        "Text": "process::exit(1)",
+                                                                        "source": {
+                                                                            "file": "/app/backend/Clearch/src/main.rs",
+                                                                            "line": 54
+                                                                        },
+                                                                        "is_library": true
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "else_clause",
+                                "Text": "else {\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }",
+                                "children": [
+                                    {
+                                        "type": "block",
+                                        "Text": "{\n        eprintln!(\"Error: Please provide a search query using -q or --specify.\");\n        process::exit(1);\n    }",
+                                        "children": [
+                                            {
+                                                "type": "macro_invocation",
+                                                "Text": "eprintln!(\"Error: Please provide a search query using -q or --specify.\")",
+                                                "children": [
+                                                    {
+                                                        "type": "identifier",
+                                                        "Text": "eprintln"
+                                                    },
+                                                    {
+                                                        "type": "token_tree",
+                                                        "Text": "(\"Error: Please provide a search query using -q or --specify.\")",
+                                                        "children": [
+                                                            {
+                                                                "type": "string_literal",
+                                                                "Text": "\"Error: Please provide a search query using -q or --specify.\""
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "call_expression",
+                                                "Text": "process::exit(1)",
+                                                "source": {
+                                                    "file": "/app/backend/Clearch/src/main.rs",
+                                                    "line": 59
+                                                },
+                                                "is_library": true
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
             }
         ]
     },
-    "modules_used": [
-        "json",
-        "new",
-        "os",
-        "test"
-    ],
-    "/app/backend/sample_project/new.py": {
-        "type": "module",
-        "text": "import json\ndef idk(a,b,c):\n    print()\n    x=20\n    exec()"
+    "modules_used": [],
+    "/app/backend/Clearch/src/traits.rs": {
+        "type": "source_file",
+        "text": "// src/traits.rs\n\nuse std::error::Error;\n\npub trait LLMRequest {\n    async fn req(&self, query: &str, fine: &str) -> Result<String, Box<dyn Error>>;\n    fn new(api_key: String) -> Self;\n}\n\n"
     },
-    "/app/backend/sample_project/test.py": {
-        "type": "module",
-        "text": "from new import idk\ndef fd():\n    exec(\"print('hedsadsallo')\")  # Triggers a vulnerability\n    idk(10,20,30)"
+    "/app/backend/Clearch/src/llms/claude.rs": {
+        "type": "source_file",
+        "text": "use std::error::Error;\nuse reqwest::Client;\nuse crate::traits::LLMRequest;\n\nstruct ClaudeModel {\n    client: Client,\n    api_key: String,\n}\n\nimpl LLMRequest for ClaudeModel {\n    fn new(api_key: String) -> Self {\n        ClaudeModel{ client: Client::new(), api_key }\n    }\n    async fn req(&self, query: &str, fine: &str) -> Result<String, Box<dyn Error>> {\n        let url = \"https://api.anthropic.com/v1/completions\"; // The Claude API endpoint\n        let response = self.client.post(url)\n            .bearer_auth(&self.api_key)\n            .json(&serde_json::json!({\n                \"model\": fine, // Use the `fine` parameter for the model identifier\n                \"prompt\": query, // Use the `query` parameter for the prompt\n                \"max_tokens\": 100,\n            }))\n            .send()\n            .await?;\n    \n        let text = response.text().await?;\n        Ok(text)\n    }\n    \n}\n"
+    },
+    "/app/backend/Clearch/src/llms/gemini.rs": {
+        "type": "source_file",
+        "text": "use reqwest::{header, Client};\nuse serde_json::{json, Value};\nuse std::error::Error;\nuse crate::traits::LLMRequest;\n\n\npub struct GeminiModel {\n    api_key: String,\n    client: Client,\n}\n\nimpl LLMRequest for GeminiModel {\n    fn new(api_key: String) -> Self {\n        GeminiModel { client: Client::new(), api_key }\n    }\n\n    async fn req(&self, query: &str, fine: &str) -> Result<String, Box<dyn Error>> {\n        let map = json!({\n            \"contents\": [\n                {\n                    \"parts\": [\n                        {\n                            \"text\": format!(\"{} {}\", query, fine)\n                        }\n                    ]\n                }\n            ]\n        });\n       \n        let resp = self.client.post(format!(\"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={}\", self.api_key))\n            .header(header::CONTENT_TYPE, \"application/json\")\n            .json(&map)\n            .send()\n            .await?;\n\n        let json: Value = resp.json().await?;\n\n        if let Some(candidate) = json[\"candidates\"].get(0) {\n            if let Some(content) = candidate[\"content\"][\"parts\"].get(0) {\n                if let Some(text) = content[\"text\"].as_str() {\n                    println!(\"{}\", text);\n                    return Ok(text.to_string()); \n                }\n            }\n        }\n        Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, \"Invalid\")))\n    }\n}\n\n\n\n\n"
+    },
+    "/app/backend/Clearch/src/llms/gpt.rs": {
+        "type": "source_file",
+        "text": "use reqwest::Client;\nuse crate::traits::LLMRequest;\n\npub struct GPT4Model {\n    client: Client,\n    api_key: String,\n}\n\nimpl GPT4Model {\n    pub fn new() -> Self {\n        let api_key = \"\".to_string(); // Replace with your actual API key\n        GPT4Model {\n            client: Client::new(),\n            api_key,\n        }\n    }\n\n    pub async fn req(&self, prompt: &str) -> Result<String, reqwest::Error> {\n        let url = \"https://api.openai.com/v1/completions\";\n        let response = self.client.post(url)\n        .bearer_auth(&self.api_key)\n        .json(&serde_json::json!({\n            \"model\": \"gpt-3.5\",\n            \"prompt\": prompt,\n            \"max_tokens\": 100,\n        }))\n        .send()\n        .await?\n        .text()\n        .await?;\n        Ok(response)\n    }\n}\n\n"
+    },
+    "/app/backend/Clearch/src/llms/mod.rs": {
+        "type": "source_file",
+        "text": "// src/llms/mod.rs\npub mod claude;\npub mod gemini;\npub mod gpt; // This ensures that gpt.rs is exposed\n"
     }
 }

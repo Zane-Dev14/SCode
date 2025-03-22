@@ -75,6 +75,16 @@ def detect_vulnerabilities(node):
             vulnerabilities.append(f"Vulnerable function used: {function_name}")
     return vulnerabilities
 
+def extract_imports(node, modules_used):
+    """Extract imported modules from the AST node."""
+    if node.type in ['import_statement', 'import_from_statement']:
+        for child in node.children:
+            if child.type == 'dotted_name':
+                modules_used.add(child.text.decode('utf-8'))
+                break
+    for child in node.children:
+        extract_imports(child, modules_used)
+
 def extract_variables(node):
     """Extract variables and their values across languages."""
     variables = {}
@@ -110,70 +120,95 @@ def resolve_function_call(call_node, function_map):
     return None
 
 def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None):
-    """Convert node to dict, expanding function calls with cycle prevention."""
+    """Convert node to dict, expanding function calls recursively with cycle prevention."""
     if visited is None:
         visited = set()
+    if node.type == 'comment':
+        return None
     result = {"type": node.type, "Text": node.text.decode("utf-8")}
-    
-    # Track modules from imports generically
-    import_types = ['import_statement', 'import_from_statement', 'import_declaration']
-    if node.type in import_types:
-        for child in node.children:
-            if child.type == 'dotted_name':  # Common for Python
-                modules_used.add(child.text.decode('utf-8'))
-                break
-            elif child.type == 'string':  # Common for JavaScript/Java imports
-                modules_used.add(child.text.decode('utf-8').strip('"\''))
-                break
     
     # Extract variables
     vars = extract_variables(node)
     if vars:
         result["variables"] = vars
     
-    # Define high-level nodes that shouldn’t show granular children
-    high_level_nodes = ['call', 'assignment', 'variable_declarator', 'assignment_expression']
-    named_children = [child for child in node.children if child.is_named]
-    if named_children:
-        result["children"] = []
-        for child in named_children:
-            # Skip granular children for high-level nodes
-            if node.type in high_level_nodes and child.type in ['identifier', 'string', 'integer', 'number']:
-                continue
-            child_dict = node_to_dict(child, function_map, expanded_asts, modules_used, visited)
-            if child.type == 'call':
-                called_ast = resolve_function_call(child, function_map)
-                if called_ast:
-                    func_key = (called_ast.start_point, called_ast.end_point)
-                    file_path, func_name, param_count = next(
-                        k for k, v in function_map.items() if v == called_ast
-                    )
-                    visited_key = (file_path, func_name, param_count)
-                    if func_key in expanded_asts:
-                        child_dict["called_function"] = {"ref": str(func_key)}
-                    elif visited_key not in visited:
-                        visited.add(visited_key)
-                        expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, visited)
-                        expanded_asts[func_key] = expanded_ast
-                        child_dict["called_function"] = expanded_ast
-                else:
-                    child_dict["is_library"] = True  # Mark unresolved calls
-            result["children"].append(child_dict)
+    leaf_types = [
+        'identifier', 'string', 'integer', 'float', 'boolean', 'true', 'false', 'null', 'number', 'character',
+        'dotted_name', 'argument_list', 'parameters'
+    ]
+    structural_nodes = ['call', 'assignment', 'function_definition']
+    
+    if node.type not in leaf_types:
+        named_children = [child for child in node.children if child.is_named]
+        if named_children:
+            if node.type == 'expression_statement' and len(named_children) == 1:
+                # Unwrap expression_statement
+                return node_to_dict(named_children[0], function_map, expanded_asts, modules_used, visited)
+            elif node.type in structural_nodes:
+                if node.type == 'call' and resolve_function_call(node, function_map):
+                    called_ast = resolve_function_call(node, function_map)
+                    if called_ast:
+                        func_key = (called_ast.start_point, called_ast.end_point)
+                        file_path, func_name, param_count = next(
+                            k for k, v in function_map.items() if v == called_ast
+                        )
+                        ref_key = f"{file_path}:{func_name}:{param_count}"
+                        visited_key = (file_path, func_name, param_count)
+                        if func_key in expanded_asts:
+                            result["called_function"] = {"ref": ref_key}
+                        elif visited_key not in visited:
+                            visited.add(visited_key)
+                            expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, visited)
+                            if expanded_ast["type"] == "function_definition":
+                                expanded_ast["id"] = ref_key  # Tag function definition
+                            expanded_asts[func_key] = expanded_ast
+                            result["called_function"] = expanded_ast
+                        else:
+                            result["called_function"] = {"ref": ref_key}
+                elif node.type == 'function_definition':
+                    result["children"] = []
+                    block_node = next((c for c in named_children if c.type == 'block'), None)
+                    if block_node:
+                        for block_child in block_node.children:
+                            if block_child.is_named and block_child.type != 'comment':
+                                child_dict = node_to_dict(block_child, function_map, expanded_asts, modules_used, visited)
+                                if child_dict and child_dict["type"] == "expression_statement" and len(child_dict.get("children", [])) == 1:
+                                    result["children"].append(child_dict["children"][0])
+                                elif child_dict:
+                                    result["children"].append(child_dict)
+                # Assignment and simple calls have no children
+            else:
+                result["children"] = []
+                for child in named_children:
+                    child_dict = node_to_dict(child, function_map, expanded_asts, modules_used, visited)
+                    if child_dict:
+                        result["children"].append(child_dict)
     
     vulnerabilities = detect_vulnerabilities(node)
     if vulnerabilities:
         result["vulnerabilities"] = vulnerabilities
+    if node.type == 'call' and not resolve_function_call(node, function_map) and not result.get("vulnerabilities"):
+        result["is_library"] = True
+    
+    # Add visual metadata for D3.js
+    if "vulnerabilities" in result:
+        result["color"] = "red"
+    elif "is_library" in result:
+        result["color"] = "blue"
+    elif "variables" in result:
+        result["color"] = "green"
+    
     return result
-
 def generate_project_asts(project_dir, entrypoint_file):
     """Generate expanded AST for the entrypoint using all project ASTs."""
     ast_map, function_map = parse_all_files(project_dir)
     main_ast = ast_map[entrypoint_file]
     expanded_asts = {}
     modules_used = set()
+    # Collect imports from all files
+    for root_node in ast_map.values():
+        extract_imports(root_node, modules_used)
     ast_dict = node_to_dict(main_ast, function_map, expanded_asts, modules_used)
-    
-    # Structure output
     ast_map_dict = {
         "main_ast": ast_dict,
         "modules_used": list(modules_used)

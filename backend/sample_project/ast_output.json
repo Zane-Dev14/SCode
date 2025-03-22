@@ -30,24 +30,43 @@
             {
                 "type": "call",
                 "Text": "fd()",
+                "source": {
+                    "file": "/app/backend/sample_project/main.py",
+                    "line": 3
+                },
                 "called_function": {
                     "type": "function_definition",
                     "Text": "def fd():\n    exec(\"print('hedsadsallo')\")  # Triggers a vulnerability\n    idk(10,20,30)",
+                    "source": {
+                        "file": "/app/backend/sample_project/test.py",
+                        "line": 2
+                    },
                     "children": [
                         {
                             "type": "call",
                             "Text": "exec(\"print('hedsadsallo')\")",
+                            "source": {
+                                "file": "/app/backend/sample_project/test.py",
+                                "line": 3
+                            },
                             "vulnerabilities": [
                                 "Vulnerable function used: exec"
-                            ],
-                            "color": "red"
+                            ]
                         },
                         {
                             "type": "call",
                             "Text": "idk(10,20,30)",
+                            "source": {
+                                "file": "/app/backend/sample_project/test.py",
+                                "line": 4
+                            },
                             "called_function": {
                                 "type": "function_definition",
                                 "Text": "def idk(a,b,c):\n    print()\n    x=20\n    exec()",
+                                "source": {
+                                    "file": "/app/backend/sample_project/new.py",
+                                    "line": 2
+                                },
                                 "variables": {
                                     "a": null,
                                     "b": null,
@@ -57,27 +76,35 @@
                                     {
                                         "type": "call",
                                         "Text": "print()",
-                                        "is_library": true,
-                                        "color": "blue"
+                                        "source": {
+                                            "file": "/app/backend/sample_project/new.py",
+                                            "line": 3
+                                        },
+                                        "is_library": true
                                     },
                                     {
                                         "type": "assignment",
                                         "Text": "x=20",
+                                        "source": {
+                                            "file": "/app/backend/sample_project/new.py",
+                                            "line": 4
+                                        },
                                         "variables": {
                                             "x": "20"
-                                        },
-                                        "color": "green"
+                                        }
                                     },
                                     {
                                         "type": "call",
                                         "Text": "exec()",
+                                        "source": {
+                                            "file": "/app/backend/sample_project/new.py",
+                                            "line": 5
+                                        },
                                         "vulnerabilities": [
                                             "Vulnerable function used: exec"
-                                        ],
-                                        "color": "red"
+                                        ]
                                     }
                                 ],
-                                "color": "green",
                                 "id": "/app/backend/sample_project/new.py:idk:3"
                             }
                         }
@@ -88,16 +115,22 @@
             {
                 "type": "assignment",
                 "Text": "x=10",
+                "source": {
+                    "file": "/app/backend/sample_project/main.py",
+                    "line": 4
+                },
                 "variables": {
                     "x": "10"
-                },
-                "color": "green"
+                }
             },
             {
                 "type": "call",
                 "Text": "print(\"\")",
-                "is_library": true,
-                "color": "blue"
+                "source": {
+                    "file": "/app/backend/sample_project/main.py",
+                    "line": 5
+                },
+                "is_library": true
             }
         ]
     },

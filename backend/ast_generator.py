@@ -119,13 +119,17 @@ def resolve_function_call(call_node, function_map):
             return def_node
     return None
 
-def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None):
+def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, file_path=None):
     """Convert node to dict, expanding function calls recursively with cycle prevention."""
     if visited is None:
         visited = set()
     if node.type == 'comment':
         return None
     result = {"type": node.type, "Text": node.text.decode("utf-8")}
+    
+    # Add source only for key nodes
+    if node.start_point and node.type in ['function_definition', 'call', 'assignment']:
+        result["source"] = {"file": file_path or "unknown", "line": node.start_point[0] + 1}
     
     # Extract variables
     vars = extract_variables(node)
@@ -142,8 +146,7 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None):
         named_children = [child for child in node.children if child.is_named]
         if named_children:
             if node.type == 'expression_statement' and len(named_children) == 1:
-                # Unwrap expression_statement
-                return node_to_dict(named_children[0], function_map, expanded_asts, modules_used, visited)
+                return node_to_dict(named_children[0], function_map, expanded_asts, modules_used, visited, file_path)
             elif node.type in structural_nodes:
                 if node.type == 'call' and resolve_function_call(node, function_map):
                     called_ast = resolve_function_call(node, function_map)
@@ -158,9 +161,9 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None):
                             result["called_function"] = {"ref": ref_key}
                         elif visited_key not in visited:
                             visited.add(visited_key)
-                            expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, visited)
+                            expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, visited, file_path)
                             if expanded_ast["type"] == "function_definition":
-                                expanded_ast["id"] = ref_key  # Tag function definition
+                                expanded_ast["id"] = ref_key
                             expanded_asts[func_key] = expanded_ast
                             result["called_function"] = expanded_ast
                         else:
@@ -171,16 +174,15 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None):
                     if block_node:
                         for block_child in block_node.children:
                             if block_child.is_named and block_child.type != 'comment':
-                                child_dict = node_to_dict(block_child, function_map, expanded_asts, modules_used, visited)
+                                child_dict = node_to_dict(block_child, function_map, expanded_asts, modules_used, visited, file_path)
                                 if child_dict and child_dict["type"] == "expression_statement" and len(child_dict.get("children", [])) == 1:
                                     result["children"].append(child_dict["children"][0])
                                 elif child_dict:
                                     result["children"].append(child_dict)
-                # Assignment and simple calls have no children
             else:
                 result["children"] = []
                 for child in named_children:
-                    child_dict = node_to_dict(child, function_map, expanded_asts, modules_used, visited)
+                    child_dict = node_to_dict(child, function_map, expanded_asts, modules_used, visited, file_path)
                     if child_dict:
                         result["children"].append(child_dict)
     
@@ -190,36 +192,45 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None):
     if node.type == 'call' and not resolve_function_call(node, function_map) and not result.get("vulnerabilities"):
         result["is_library"] = True
     
-    # Add visual metadata for D3.js
-    if "vulnerabilities" in result:
-        result["color"] = "red"
-    elif "is_library" in result:
-        result["color"] = "blue"
-    elif "variables" in result:
-        result["color"] = "green"
-    
     return result
-def generate_project_asts(project_dir, entrypoint_file):
+def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     """Generate expanded AST for the entrypoint using all project ASTs."""
     ast_map, function_map = parse_all_files(project_dir)
+    
+    # Check if entrypoint exists
+    if entrypoint_file not in ast_map:
+        raise ValueError(f"Entrypoint file '{entrypoint_file}' not found in project directory '{project_dir}'")
+    
     main_ast = ast_map[entrypoint_file]
     expanded_asts = {}
     modules_used = set()
+    
     # Collect imports from all files
     for root_node in ast_map.values():
         extract_imports(root_node, modules_used)
-    ast_dict = node_to_dict(main_ast, function_map, expanded_asts, modules_used)
+    
+    # Pass file_path for the entrypoint
+    ast_dict = node_to_dict(main_ast, function_map, expanded_asts, modules_used, file_path=entrypoint_file)
+    
+    # Build the result dictionary
     ast_map_dict = {
         "main_ast": ast_dict,
-        "modules_used": list(modules_used)
+        "modules_used": sorted(list(modules_used))  # Ensure consistent order
     }
+    
+    # Add other files' AST info (excluding entrypoint)
     for file_path, root_node in ast_map.items():
         if file_path != entrypoint_file:
             ast_map_dict[file_path] = {
                 "type": root_node.type,
                 "text": root_node.text.decode('utf-8')
             }
-    save_ast_to_file(ast_map_dict, '/app/backend/sample_project/ast_output.json')
+    
+    # Use provided output file or default to a project-specific path
+    output_path = output_file or f"{project_dir}/ast_output.json"
+    save_ast_to_file(ast_map_dict, output_path)
+    
+    return ast_map_dict  # Optional: return for further use
 
 def save_ast_to_file(ast_map, filename):
     """Save the AST dictionary to a JSON file."""

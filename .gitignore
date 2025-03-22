@@ -132,3 +132,4 @@ backend/sample_project/ast_output.json
 /backend/sample_project
 /backend/Clearch
 /backend/tree-sitter-langs
+backend/tree-sitter-langs/tree-sitter-cpp

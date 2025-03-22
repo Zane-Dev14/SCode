@@ -1,7 +1,7 @@
 {
     "main_ast": {
         "type": "module",
-        "Text": "from test import fd\nfd()\nx=10\nprint(\"\")",
+        "Text": "from test import fd\nimport os\nfd()\nx=10\nprint(\"\")",
         "children": [
             {
                 "type": "import_from_statement",
@@ -30,13 +30,218 @@
                 ]
             },
             {
+                "type": "import_statement",
+                "Text": "import os",
+                "children": [
+                    {
+                        "type": "dotted_name",
+                        "Text": "os",
+                        "children": [
+                            {
+                                "type": "identifier",
+                                "Text": "os"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
                 "type": "expression_statement",
                 "Text": "fd()",
                 "children": [
                     {
                         "type": "call",
                         "Text": "fd()",
-                        "children": []
+                        "children": [
+                            {
+                                "type": "argument_list",
+                                "Text": "()"
+                            }
+                        ],
+                        "called_function": {
+                            "type": "function_definition",
+                            "Text": "def fd():\n    exec(\"print('hedsadsallo')\")  # Triggers a vulnerability\n    idk(10,20,30)",
+                            "children": [
+                                {
+                                    "type": "identifier",
+                                    "Text": "fd"
+                                },
+                                {
+                                    "type": "parameters",
+                                    "Text": "()"
+                                },
+                                {
+                                    "type": "block",
+                                    "Text": "exec(\"print('hedsadsallo')\")  # Triggers a vulnerability\n    idk(10,20,30)",
+                                    "children": [
+                                        {
+                                            "type": "expression_statement",
+                                            "Text": "exec(\"print('hedsadsallo')\")",
+                                            "children": [
+                                                {
+                                                    "type": "call",
+                                                    "Text": "exec(\"print('hedsadsallo')\")",
+                                                    "children": [
+                                                        {
+                                                            "type": "argument_list",
+                                                            "Text": "(\"print('hedsadsallo')\")",
+                                                            "children": [
+                                                                {
+                                                                    "type": "string",
+                                                                    "Text": "\"print('hedsadsallo')\"",
+                                                                    "children": [
+                                                                        {
+                                                                            "type": "string_start",
+                                                                            "Text": "\""
+                                                                        },
+                                                                        {
+                                                                            "type": "string_content",
+                                                                            "Text": "print('hedsadsallo')"
+                                                                        },
+                                                                        {
+                                                                            "type": "string_end",
+                                                                            "Text": "\""
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ],
+                                                    "vulnerabilities": [
+                                                        "Vulnerable function used: exec"
+                                                    ],
+                                                    "is_library": true
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "comment",
+                                            "Text": "# Triggers a vulnerability"
+                                        },
+                                        {
+                                            "type": "expression_statement",
+                                            "Text": "idk(10,20,30)",
+                                            "children": [
+                                                {
+                                                    "type": "call",
+                                                    "Text": "idk(10,20,30)",
+                                                    "children": [
+                                                        {
+                                                            "type": "argument_list",
+                                                            "Text": "(10,20,30)",
+                                                            "children": [
+                                                                {
+                                                                    "type": "integer",
+                                                                    "Text": "10"
+                                                                },
+                                                                {
+                                                                    "type": "integer",
+                                                                    "Text": "20"
+                                                                },
+                                                                {
+                                                                    "type": "integer",
+                                                                    "Text": "30"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ],
+                                                    "called_function": {
+                                                        "type": "function_definition",
+                                                        "Text": "def idk(a,b,c):\n    print()\n    x=20\n    exec()",
+                                                        "variables": {
+                                                            "a": null,
+                                                            "b": null,
+                                                            "c": null
+                                                        },
+                                                        "children": [
+                                                            {
+                                                                "type": "identifier",
+                                                                "Text": "idk"
+                                                            },
+                                                            {
+                                                                "type": "parameters",
+                                                                "Text": "(a,b,c)",
+                                                                "children": [
+                                                                    {
+                                                                        "type": "identifier",
+                                                                        "Text": "a"
+                                                                    },
+                                                                    {
+                                                                        "type": "identifier",
+                                                                        "Text": "b"
+                                                                    },
+                                                                    {
+                                                                        "type": "identifier",
+                                                                        "Text": "c"
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
+                                                                "type": "block",
+                                                                "Text": "print()\n    x=20\n    exec()",
+                                                                "children": [
+                                                                    {
+                                                                        "type": "expression_statement",
+                                                                        "Text": "print()",
+                                                                        "children": [
+                                                                            {
+                                                                                "type": "call",
+                                                                                "Text": "print()",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "type": "argument_list",
+                                                                                        "Text": "()"
+                                                                                    }
+                                                                                ],
+                                                                                "is_library": true
+                                                                            }
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "type": "expression_statement",
+                                                                        "Text": "x=20",
+                                                                        "children": [
+                                                                            {
+                                                                                "type": "assignment",
+                                                                                "Text": "x=20",
+                                                                                "variables": {
+                                                                                    "x": "20"
+                                                                                },
+                                                                                "children": []
+                                                                            }
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "type": "expression_statement",
+                                                                        "Text": "exec()",
+                                                                        "children": [
+                                                                            {
+                                                                                "type": "call",
+                                                                                "Text": "exec()",
+                                                                                "children": [
+                                                                                    {
+                                                                                        "type": "argument_list",
+                                                                                        "Text": "()"
+                                                                                    }
+                                                                                ],
+                                                                                "vulnerabilities": [
+                                                                                    "Vulnerable function used: exec"
+                                                                                ],
+                                                                                "is_library": true
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
                     }
                 ]
             },
@@ -61,7 +266,28 @@
                     {
                         "type": "call",
                         "Text": "print(\"\")",
-                        "children": [],
+                        "children": [
+                            {
+                                "type": "argument_list",
+                                "Text": "(\"\")",
+                                "children": [
+                                    {
+                                        "type": "string",
+                                        "Text": "\"\"",
+                                        "children": [
+                                            {
+                                                "type": "string_start",
+                                                "Text": "\""
+                                            },
+                                            {
+                                                "type": "string_end",
+                                                "Text": "\""
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ],
                         "is_library": true
                     }
                 ]
@@ -69,11 +295,12 @@
         ]
     },
     "modules_used": [
-        "test"
+        "test",
+        "os"
     ],
     "/app/backend/sample_project/new.py": {
         "type": "module",
-        "text": "def idk(a,b,c):\n    print()\n    x=20\n    exec()"
+        "text": "import json\ndef idk(a,b,c):\n    print()\n    x=20\n    exec()"
     },
     "/app/backend/sample_project/test.py": {
         "type": "module",

@@ -28,8 +28,8 @@ LANGUAGE_MAPPING = {
 
 def parse_all_files(project_dir):
     """Parse all source files into ASTs and build a function map."""
-    ast_map = {}  # file_path → AST root node
-    function_map = {}  # (file_path, fully_qualified_name, param_count) → function definition node
+    ast_map = {}
+    function_map = {}
     for root, _, files in os.walk(project_dir):
         for file in files:
             if file.endswith(('.py', '.js', '.java', '.cpp', '.c', '.go', '.rb', '.cs', '.rs')):
@@ -41,7 +41,6 @@ def parse_all_files(project_dir):
                     parser = Parser(Language(LANGUAGE_MAPPING[lang]))
                     tree = parser.parse(bytes(code, "utf-8"))
                     ast_map[file_path] = tree.root_node
-                    # Extract function definitions universally
                     for node in traverse(tree.root_node):
                         func_types = [
                             'function_definition', 'method_definition', 'function_declaration', 'function_item',
@@ -52,14 +51,19 @@ def parse_all_files(project_dir):
                             params_node = node.child_by_field_name('parameters')
                             if name_node:
                                 func_name = name_node.text.decode('utf-8')
-                                # For Rust/C++: Check if part of a struct/class (fully qualified name)
-                                parent = node.parent
                                 qualified_name = func_name
-                                while parent and parent.type in ['struct_item', 'class_declaration', 'impl_item']:
+                                # Check for namespace (Rust impl, C++ class, etc.)
+                                parent = node.parent
+                                while parent:
                                     if parent.type == 'impl_item':
                                         type_node = parent.child_by_field_name('type')
                                         if type_node:
                                             qualified_name = f"{type_node.text.decode('utf-8')}::{func_name}"
+                                            break
+                                    elif parent.type in ['class_declaration', 'struct_item']:
+                                        name_node = parent.child_by_field_name('name')
+                                        if name_node:
+                                            qualified_name = f"{name_node.text.decode('utf-8')}::{func_name}"
                                             break
                                     parent = parent.parent
                                 param_count = 0
@@ -67,7 +71,7 @@ def parse_all_files(project_dir):
                                     param_types = ['identifier', 'parameter', 'formal_parameter', 'simple_parameter']
                                     param_count = sum(1 for child in params_node.children if child.type in param_types)
                                 function_map[(file_path, qualified_name, param_count)] = node
-                                print(f"Function mapped: {(file_path, qualified_name, param_count)}")
+                                print(f"Mapped: {(file_path, qualified_name, param_count)}")
     return ast_map, function_map
 
 
@@ -247,8 +251,8 @@ def resolve_function_call(call_node, function_map):
     if not func_part or func_part.type not in ['identifier', 'member_expression', 'field_access', 'field_expression', 'scoped_identifier']:
         return None
     
-    full_func_name = func_part.text.decode('utf-8')  # Keep full name (e.g., GPT4Model::new)
-    base_func_name = full_func_name.split('::')[-1].split('.')[-1]  # Fallback (e.g., new)
+    full_func_name = func_part.text.decode('utf-8')  # e.g., "Gemini::parse"
+    base_func_name = full_func_name.split('::')[-1].split('.')[-1]  # e.g., "parse"
     
     arg_field_names = ['arguments', 'argument_list', 'args']
     args = next((call_node.child_by_field_name(f) for f in arg_field_names if call_node.child_by_field_name(f)), None)
@@ -331,8 +335,9 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, 
                 elif node.type in ['call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation']:
                     func = node.child_by_field_name('function') or (node.children[0] if node.type == 'macro_invocation' else None)
                     if func:
-                        func_name = func.text.decode('utf-8')  # Keep full name for display
-                        result["function_call"] = func_name
+                        full_func_name = func.text.decode('utf-8')
+                        simple_func_name = full_func_name.split('::')[-1].split('.')[-1].split('(')[0]  # e.g., "new", "parse"
+                        result["function_call"] = simple_func_name
                         called_ast = resolve_function_call(node, function_map)
                         if called_ast:
                             func_key = (called_ast.start_point, called_ast.end_point)
@@ -385,6 +390,8 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, 
                         for child in named_children if child.type not in leaf_types
                     ]
             result["children"] = [c for c in result.get("children", []) if c]
+            if not result["children"]:
+                del result["children"]
     
     vulnerabilities = detect_vulnerabilities(node)
     if vulnerabilities:

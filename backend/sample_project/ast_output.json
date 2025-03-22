@@ -8,8 +8,7 @@
                 "source": {
                     "file": "/app/backend/Clearch/src/main.rs",
                     "line": 2
-                },
-                "children": []
+                }
             },
             {
                 "type": "use_declaration",
@@ -17,8 +16,7 @@
                 "source": {
                     "file": "/app/backend/Clearch/src/main.rs",
                     "line": 3
-                },
-                "children": []
+                }
             },
             {
                 "type": "use_declaration",
@@ -26,8 +24,7 @@
                 "source": {
                     "file": "/app/backend/Clearch/src/main.rs",
                     "line": 4
-                },
-                "children": []
+                }
             },
             {
                 "type": "use_declaration",
@@ -35,33 +32,27 @@
                 "source": {
                     "file": "/app/backend/Clearch/src/main.rs",
                     "line": 5
-                },
-                "children": []
+                }
             },
             {
                 "type": "mod_item",
-                "Text": "mod traits;",
-                "children": []
+                "Text": "mod traits;"
             },
             {
                 "type": "mod_item",
-                "Text": "mod llms;",
-                "children": []
+                "Text": "mod llms;"
             },
             {
                 "type": "attribute_item",
-                "Text": "#[derive(Parser)]",
-                "children": []
+                "Text": "#[derive(Parser)]"
             },
             {
                 "type": "attribute_item",
-                "Text": "#[command(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)]",
-                "children": []
+                "Text": "#[command(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)]"
             },
             {
                 "type": "attribute_item",
-                "Text": "#[tokio::main]",
-                "children": []
+                "Text": "#[tokio::main]"
             },
             {
                 "type": "function_item",
@@ -88,9 +79,8 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 28
                                 },
-                                "function_call": "os_type().unwrap_or_else",
-                                "is_library": true,
-                                "children": []
+                                "function_call": "unwrap_or_else",
+                                "is_library": true
                             }
                         ]
                     },
@@ -110,9 +100,8 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 29
                                 },
-                                "function_call": "os_release().unwrap_or_else",
-                                "is_library": true,
-                                "children": []
+                                "function_call": "unwrap_or_else",
+                                "is_library": true
                             }
                         ]
                     },
@@ -132,9 +121,8 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 30
                                 },
-                                "function_call": "linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else",
-                                "is_library": true,
-                                "children": []
+                                "function_call": "unwrap_or_else",
+                                "is_library": true
                             }
                         ]
                     },
@@ -145,8 +133,7 @@
                             "line": 35
                         },
                         "function_call": "println",
-                        "is_library": true,
-                        "children": []
+                        "is_library": true
                     },
                     {
                         "type": "let_declaration",
@@ -164,9 +151,8 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 41
                                 },
-                                "function_call": "Gemini::parse",
-                                "is_library": true,
-                                "children": []
+                                "function_call": "parse",
+                                "is_library": true
                             }
                         ]
                     },
@@ -186,7 +172,7 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 44
                                 },
-                                "function_call": "GPT4Model::new",
+                                "function_call": "new",
                                 "called_function": {
                                     "type": "function_item",
                                     "source": {
@@ -212,16 +198,14 @@
                                                         "file": "/app/backend/Clearch/src/llms/gpt.rs",
                                                         "line": 11
                                                     },
-                                                    "function_call": "\"\".to_string",
-                                                    "is_library": true,
-                                                    "children": []
+                                                    "function_call": "to_string",
+                                                    "is_library": true
                                                 }
                                             ]
                                         }
                                     ],
-                                    "id": "/app/backend/Clearch/src/llms/gpt.rs:new:0"
-                                },
-                                "children": []
+                                    "id": "/app/backend/Clearch/src/llms/gpt.rs:GPT4Model::new:0"
+                                }
                             }
                         ]
                     },
@@ -238,8 +222,7 @@
                                         "type": "tuple_struct_pattern",
                                         "variables": {
                                             "query": null
-                                        },
-                                        "children": []
+                                        }
                                     }
                                 ]
                             },
@@ -253,8 +236,7 @@
                                             "line": 47
                                         },
                                         "function_call": "println",
-                                        "is_library": true,
-                                        "children": []
+                                        "is_library": true
                                     },
                                     {
                                         "type": "match_expression",
@@ -272,8 +254,7 @@
                                                                     "line": 51
                                                                 },
                                                                 "function_call": "println",
-                                                                "is_library": true,
-                                                                "children": []
+                                                                "is_library": true
                                                             }
                                                         ]
                                                     },
@@ -290,8 +271,7 @@
                                                                             "line": 53
                                                                         },
                                                                         "function_call": "eprintln",
-                                                                        "is_library": true,
-                                                                        "children": []
+                                                                        "is_library": true
                                                                     },
                                                                     {
                                                                         "type": "call_expression",
@@ -299,9 +279,8 @@
                                                                             "file": "/app/backend/Clearch/src/main.rs",
                                                                             "line": 54
                                                                         },
-                                                                        "function_call": "process::exit",
-                                                                        "is_library": true,
-                                                                        "children": []
+                                                                        "function_call": "exit",
+                                                                        "is_library": true
                                                                     }
                                                                 ]
                                                             }
@@ -326,8 +305,7 @@
                                                     "line": 58
                                                 },
                                                 "function_call": "eprintln",
-                                                "is_library": true,
-                                                "children": []
+                                                "is_library": true
                                             },
                                             {
                                                 "type": "call_expression",
@@ -335,9 +313,8 @@
                                                     "file": "/app/backend/Clearch/src/main.rs",
                                                     "line": 59
                                                 },
-                                                "function_call": "process::exit",
-                                                "is_library": true,
-                                                "children": []
+                                                "function_call": "exit",
+                                                "is_library": true
                                             }
                                         ]
                                     }

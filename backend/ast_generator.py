@@ -261,11 +261,17 @@ def resolve_function_call(call_node, function_map):
         arg_types = ['identifier', 'expression', 'literal', 'call_expression', 'binary_expression']
         arg_count = sum(1 for child in args.children if child.type in arg_types and child.is_named)
     
-    # Try full name first, then base name
+    # Try full name, base name, and constructor-like (e.g., Gemini::parse → GeminiModel::new)
     for (file_path, name, param_count), def_node in function_map.items():
-        if (name == full_func_name or name == base_func_name) and param_count == arg_count:
-            print(f"Resolved: {full_func_name} → {(file_path, name, param_count)}")
-            return def_node
+        if param_count == arg_count:
+            if name == full_func_name or name.endswith(f"::{base_func_name}"):
+                print(f"Resolved: {full_func_name} → {(file_path, name, param_count)}")
+                return def_node
+            # Constructor heuristic: if call is "Type::func", check "TypeModel::func" or "Type::new"
+            type_prefix = full_func_name.split('::')[0]
+            if name.startswith(f"{type_prefix}Model::") or name == f"{type_prefix}::new":
+                print(f"Resolved (constructor): {full_func_name} → {(file_path, name, param_count)}")
+                return def_node
     
     print(f"Unresolved: {full_func_name} with {arg_count} args")
     return None
@@ -336,8 +342,9 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, 
                     func = node.child_by_field_name('function') or (node.children[0] if node.type == 'macro_invocation' else None)
                     if func:
                         full_func_name = func.text.decode('utf-8')
-                        simple_func_name = full_func_name.split('::')[-1].split('.')[-1].split('(')[0]  # e.g., "new", "parse"
-                        result["function_call"] = simple_func_name
+                        # Prioritize base function name before method chain
+                        base_name = full_func_name.split('(')[0].split('::')[-1].split('.')[0]
+                        result["function_call"] = base_name  # e.g., "os_type", "parse", "exit"
                         called_ast = resolve_function_call(node, function_map)
                         if called_ast:
                             func_key = (called_ast.start_point, called_ast.end_point)

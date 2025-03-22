@@ -79,7 +79,7 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 28
                                 },
-                                "function_call": "unwrap_or_else",
+                                "function_call": "os_type",
                                 "is_library": true
                             }
                         ]
@@ -100,7 +100,7 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 29
                                 },
-                                "function_call": "unwrap_or_else",
+                                "function_call": "os_release",
                                 "is_library": true
                             }
                         ]
@@ -121,7 +121,7 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 30
                                 },
-                                "function_call": "unwrap_or_else",
+                                "function_call": "linux_os_release",
                                 "is_library": true
                             }
                         ]
@@ -198,7 +198,7 @@
                                                         "file": "/app/backend/Clearch/src/llms/gpt.rs",
                                                         "line": 11
                                                     },
-                                                    "function_call": "to_string",
+                                                    "function_call": "\"\"",
                                                     "is_library": true
                                                 }
                                             ]

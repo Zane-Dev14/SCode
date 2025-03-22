@@ -88,7 +88,7 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 28
                                 },
-                                "function_call": "os_type",
+                                "function_call": "os_type().unwrap_or_else",
                                 "is_library": true,
                                 "children": []
                             }
@@ -110,7 +110,7 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 29
                                 },
-                                "function_call": "os_release",
+                                "function_call": "os_release().unwrap_or_else",
                                 "is_library": true,
                                 "children": []
                             }
@@ -132,7 +132,7 @@
                                     "file": "/app/backend/Clearch/src/main.rs",
                                     "line": 30
                                 },
-                                "function_call": "linux_os_release",
+                                "function_call": "linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else",
                                 "is_library": true,
                                 "children": []
                             }
@@ -187,7 +187,40 @@
                                     "line": 44
                                 },
                                 "function_call": "GPT4Model::new",
-                                "is_library": true,
+                                "called_function": {
+                                    "type": "function_item",
+                                    "source": {
+                                        "file": "/app/backend/Clearch/src/llms/gpt.rs",
+                                        "line": 10
+                                    },
+                                    "function_name": "new",
+                                    "param_count": 0,
+                                    "children": [
+                                        {
+                                            "type": "let_declaration",
+                                            "source": {
+                                                "file": "/app/backend/Clearch/src/llms/gpt.rs",
+                                                "line": 11
+                                            },
+                                            "variables": {
+                                                "api_key": "\"\".to_string()"
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "call_expression",
+                                                    "source": {
+                                                        "file": "/app/backend/Clearch/src/llms/gpt.rs",
+                                                        "line": 11
+                                                    },
+                                                    "function_call": "\"\".to_string",
+                                                    "is_library": true,
+                                                    "children": []
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "id": "/app/backend/Clearch/src/llms/gpt.rs:new:0"
+                                },
                                 "children": []
                             }
                         ]

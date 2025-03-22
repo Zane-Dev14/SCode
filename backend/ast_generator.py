@@ -29,7 +29,7 @@ LANGUAGE_MAPPING = {
 def parse_all_files(project_dir):
     """Parse all source files into ASTs and build a function map."""
     ast_map = {}  # file_path → AST root node
-    function_map = {}  # (file_path, func_name, param_count) → function definition node -> Example{('/app/backend/sample_project/new.py', 'idk', 3): <Node type=function_definition, start_point=(1, 0), end_point=(4, 10)>, ('/app/backend/sample_project/test.py', 'fd', 0): <Node type=function_definition, start_point=(1, 0), end_point=(3, 17)>}
+    function_map = {}  # (file_path, fully_qualified_name, param_count) → function definition node
     for root, _, files in os.walk(project_dir):
         for file in files:
             if file.endswith(('.py', '.js', '.java', '.cpp', '.c', '.go', '.rb', '.cs', '.rs')):
@@ -38,23 +38,38 @@ def parse_all_files(project_dir):
                 if lang in LANGUAGE_MAPPING:
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         code = f.read()
-                    # Fix: Properly set up parser with language
                     parser = Parser(Language(LANGUAGE_MAPPING[lang]))
                     tree = parser.parse(bytes(code, "utf-8"))
                     ast_map[file_path] = tree.root_node
                     # Extract function definitions universally
                     for node in traverse(tree.root_node):
-                        # Support various function node types across languages
-                        func_types = ['function_definition', 'method_definition', 'function_declaration', 'function_item']
+                        func_types = [
+                            'function_definition', 'method_definition', 'function_declaration', 'function_item',
+                            'method_declaration', 'constructor_declaration', 'arrow_function'
+                        ]
                         if node.type in func_types:
                             name_node = node.child_by_field_name('name')
                             params_node = node.child_by_field_name('parameters')
-                            if name_node and params_node:
+                            if name_node:
                                 func_name = name_node.text.decode('utf-8')
-                                # Count parameters generically
-                                param_count = sum(1 for child in params_node.children if child.type == 'identifier')
-                                function_map[(file_path, func_name, param_count)] = node
+                                # For Rust/C++: Check if part of a struct/class (fully qualified name)
+                                parent = node.parent
+                                qualified_name = func_name
+                                while parent and parent.type in ['struct_item', 'class_declaration', 'impl_item']:
+                                    if parent.type == 'impl_item':
+                                        type_node = parent.child_by_field_name('type')
+                                        if type_node:
+                                            qualified_name = f"{type_node.text.decode('utf-8')}::{func_name}"
+                                            break
+                                    parent = parent.parent
+                                param_count = 0
+                                if params_node:
+                                    param_types = ['identifier', 'parameter', 'formal_parameter', 'simple_parameter']
+                                    param_count = sum(1 for child in params_node.children if child.type in param_types)
+                                function_map[(file_path, qualified_name, param_count)] = node
+                                print(f"Function mapped: {(file_path, qualified_name, param_count)}")
     return ast_map, function_map
+
 
 def traverse(node):
     """Recursively yield all nodes in an AST."""
@@ -221,54 +236,36 @@ def extract_variables(node):
 
 def resolve_function_call(call_node, function_map):
     """Resolve a function call to its definition across all supported languages."""
-    # Function part field names across languages
     function_field_names = ['function', 'callee', 'name', 'method', 'identifier']
-    
-    # Try different field names for function part
-    func_part = None
-    for field_name in function_field_names:
-        func_part = call_node.child_by_field_name(field_name)
-        if func_part:
-            break
-    
-    # If still not found, try to find it by traversing children
+    func_part = next((call_node.child_by_field_name(f) for f in function_field_names if call_node.child_by_field_name(f)), None)
     if not func_part:
         for child in call_node.children:
-            if child.type in ['identifier', 'member_expression', 'field_access', 'field_expression']:
+            if child.type in ['identifier', 'member_expression', 'field_access', 'field_expression', 'scoped_identifier']:
                 func_part = child
                 break
     
-    if not func_part or func_part.type not in ['identifier', 'member_expression', 'field_access', 'field_expression']:
+    if not func_part or func_part.type not in ['identifier', 'member_expression', 'field_access', 'field_expression', 'scoped_identifier']:
         return None
     
-    # Extract function name
-    func_name = func_part.text.decode('utf-8')
-    # For member expressions (obj.method), extract just the method name
-    if '.' in func_name:
-        func_name = func_name.split('.')[-1]
+    full_func_name = func_part.text.decode('utf-8')  # Keep full name (e.g., GPT4Model::new)
+    base_func_name = full_func_name.split('::')[-1].split('.')[-1]  # Fallback (e.g., new)
     
-    # Arguments field names across languages
     arg_field_names = ['arguments', 'argument_list', 'args']
-    
-    # Try different field names for arguments
-    args = None
-    for field_name in arg_field_names:
-        args = call_node.child_by_field_name(field_name)
-        if args:
-            break
-    
-    # Count arguments, handling different argument separators across languages
+    args = next((call_node.child_by_field_name(f) for f in arg_field_names if call_node.child_by_field_name(f)), None)
     arg_count = 0
     if args:
-        separator_types = ['(', ')', ',', 'comment']
-        arg_count = sum(1 for child in args.children if child.type not in separator_types)
+        arg_types = ['identifier', 'expression', 'literal', 'call_expression', 'binary_expression']
+        arg_count = sum(1 for child in args.children if child.type in arg_types and child.is_named)
     
-    # Search globally in function_map
+    # Try full name first, then base name
     for (file_path, name, param_count), def_node in function_map.items():
-        if name == func_name and param_count == arg_count:
+        if (name == full_func_name or name == base_func_name) and param_count == arg_count:
+            print(f"Resolved: {full_func_name} → {(file_path, name, param_count)}")
             return def_node
     
+    print(f"Unresolved: {full_func_name} with {arg_count} args")
     return None
+
 
 def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, file_path=None):
     """Convert node to dict, expanding function calls recursively with cycle prevention."""
@@ -334,19 +331,19 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, 
                 elif node.type in ['call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation']:
                     func = node.child_by_field_name('function') or (node.children[0] if node.type == 'macro_invocation' else None)
                     if func:
-                        func_name = func.text.decode('utf-8').split('.')[0].split('(')[0]  # Simplify to base name
+                        func_name = func.text.decode('utf-8')  # Keep full name for display
                         result["function_call"] = func_name
                         called_ast = resolve_function_call(node, function_map)
                         if called_ast:
                             func_key = (called_ast.start_point, called_ast.end_point)
-                            file_path, func_name, param_count = next(k for k, v in function_map.items() if v == called_ast)
-                            ref_key = f"{file_path}:{func_name}:{param_count}"
-                            visited_key = (file_path, func_name, param_count)
+                            file_path_key, defined_name, param_count = next(k for k, v in function_map.items() if v == called_ast)
+                            ref_key = f"{file_path_key}:{defined_name}:{param_count}"
+                            visited_key = (file_path_key, defined_name, param_count)
                             if func_key in expanded_asts:
                                 result["called_function"] = {"ref": ref_key}
                             elif visited_key not in visited:
                                 visited.add(visited_key)
-                                expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, visited, file_path)
+                                expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, visited, file_path_key)
                                 if expanded_ast["type"] in [
                                     'function_definition', 'method_definition', 'function_declaration', 
                                     'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
@@ -387,7 +384,7 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, 
                         node_to_dict(child, function_map, expanded_asts, modules_used, visited, file_path)
                         for child in named_children if child.type not in leaf_types
                     ]
-            result["children"] = [c for c in result.get("children", []) if c]  # Filter None, avoid empty arrays
+            result["children"] = [c for c in result.get("children", []) if c]
     
     vulnerabilities = detect_vulnerabilities(node)
     if vulnerabilities:

@@ -116,13 +116,13 @@ def extract_imports(node, modules_used):
         # C#
         'using_directive',
         # Rust
-        'use_declaration'
+        'use_declaration','use_list', 'scoped_use_list'
     ]
     
     # Module name node types across languages
     module_name_types = [
         'dotted_name', 'identifier', 'namespace_name', 'qualified_identifier',
-        'string_literal', 'string', 'raw_string_literal'
+        'string_literal', 'string', 'raw_string_literal','scoped_identifier'
     ]
     
     if node.type in import_types:
@@ -141,111 +141,80 @@ def extract_variables(node):
     """Extract variables and their values across all supported languages."""
     variables = {}
     
-    # Comprehensive assignment types across languages
     assignment_types = [
-        # Python
-        'assignment', 
-        # JavaScript
-        'variable_declarator', 'assignment_expression', 'variable_declaration',
-        # Java
-        'variable_declarator', 'assignment', 'local_variable_declaration',
-        # C/C++
-        'declaration', 'init_declarator', 'assignment_expression',
-        # Go
+        'assignment', 'variable_declarator', 'assignment_expression', 'variable_declaration',
+        'local_variable_declaration', 'declaration', 'init_declarator',
         'short_var_declaration', 'var_declaration', 'var_spec', 'assignment_statement',
-        # Ruby
-        'assignment', 'local_variable_assignment',
-        # C#
-        'variable_declaration', 'assignment_expression',
-        # Rust
-        'let_declaration', 'assignment_expression'
+        'local_variable_assignment', 'let_declaration', 'assignment_expression', 'let_condition',
+        'match_arm', 'tuple_struct_pattern'
     ]
     
-    # Handle variable assignments
     if node.type in assignment_types:
-        # Handle different field names across languages
         left = (node.child_by_field_name('left') or 
                 node.child_by_field_name('name') or 
                 node.child_by_field_name('declarator') or 
                 node.child_by_field_name('pattern'))
-        
         right = (node.child_by_field_name('right') or 
                  node.child_by_field_name('value') or 
                  node.child_by_field_name('initializer') or 
                  node.child_by_field_name('expression'))
         
-        # Handle the case where left/right might be nested
         if left:
-            # Extract identifier from potentially nested structure
             identifier = left
-            # Navigate through potential wrappers to find the actual identifier
             while identifier and identifier.type not in ['identifier', 'field_identifier']:
                 for child in identifier.children:
                     if child.type in ['identifier', 'field_identifier']:
                         identifier = child
                         break
                 else:
-                    break  # No identifier found in children
+                    break
             
             if identifier and identifier.type in ['identifier', 'field_identifier']:
                 var_name = identifier.text.decode('utf-8')
                 var_value = right.text.decode('utf-8') if right else None
                 variables[var_name] = var_value
+        
+        # Handle let Some(query) and match patterns
+        if node.type in ['let_condition', 'match_arm', 'tuple_struct_pattern']:
+            if node.type == 'tuple_struct_pattern':
+                for child in node.children:
+                    if child.type == 'identifier' and child.text.decode('utf-8') != 'Some':  # Skip constructor
+                        variables[child.text.decode('utf-8')] = None
+            elif node.type == 'let_condition':
+                pattern = node.children[0] if node.children else None
+                if pattern and pattern.type == 'tuple_struct_pattern':
+                    for child in pattern.children:
+                        if child.type == 'identifier' and child.text.decode('utf-8') != 'Some':
+                            variables[child.text.decode('utf-8')] = None
     
-    # Comprehensive function definition types across languages
     func_types = [
-        # Python
-        'function_definition', 
-        # JavaScript
-        'function_declaration', 'method_definition', 'arrow_function',
-        # Java
-        'method_declaration', 'constructor_declaration',
-        # C/C++
-        'function_definition', 'function_declarator',
-        # Go
-        'function_declaration', 'method_declaration',
-        # Ruby
-        'method', 'singleton_method',
-        # C#
-        'method_declaration', 'constructor_declaration',
-        # Rust
-        'function_item', 'function_signature_item'
+        'function_definition', 'function_declaration', 'method_definition', 'arrow_function',
+        'method_declaration', 'constructor_declaration', 'function_declarator',
+        'method', 'singleton_method', 'function_item', 'function_signature_item'
     ]
     
-    # Handle function parameters
     if node.type in func_types:
-        # Parameter container node types
         param_container_fields = ['parameters', 'parameter_list', 'formal_parameters']
-        
-        # Try to find parameters using various field names
         for field_name in param_container_fields:
             params = node.child_by_field_name(field_name)
             if params:
-                # Parameter types across languages
                 param_types = ['identifier', 'parameter', 'formal_parameter', 'simple_parameter']
-                
                 for child in params.children:
                     if child.type in param_types:
-                        # Extract parameter name from potentially nested structure
-                        param_id = child
-                        # For complex parameter declarations (like in typed languages)
+                        param_id = child.child_by_field_name('pattern') or child
                         while param_id and param_id.type not in ['identifier', 'variable_name']:
                             name_node = param_id.child_by_field_name('name')
                             if name_node:
                                 param_id = name_node
                                 break
-                            
-                            # Search through children
                             for subchild in param_id.children:
                                 if subchild.type in ['identifier', 'variable_name']:
                                     param_id = subchild
                                     break
                             else:
                                 break
-                        
                         if param_id and param_id.type in ['identifier', 'variable_name']:
-                            var_name = param_id.text.decode('utf-8')
-                            variables[var_name] = None  # Parameters have no initial value
+                            variables[param_id.text.decode('utf-8')] = None
                 break
     
     return variables
@@ -306,149 +275,127 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, 
     if visited is None:
         visited = set()
     
-    # Skip comment nodes across all languages
     comment_types = ['comment', 'line_comment', 'block_comment', 'documentation_comment']
     if node.type in comment_types:
         return None
     
-    result = {"type": node.type, "Text": node.text.decode("utf-8")}
+    result = {"type": node.type}
+    include_text_types = ['string_literal', 'identifier', 'use_declaration', 'mod_item', 'attribute_item']
+    if node.type in include_text_types:
+        result["Text"] = node.text.decode("utf-8")
     
-    # Add source info for key nodes across languages
     key_node_types = [
-        # Function definitions
         'function_definition', 'method_definition', 'function_declaration', 'method_declaration',
         'function_item', 'constructor_declaration', 'arrow_function',
-        
-        # Function calls
-        'call', 'call_expression', 'method_invocation', 'method_call',
-        
-        # Assignments
+        'call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation',
         'assignment', 'variable_declarator', 'assignment_expression', 'short_var_declaration',
-        'var_declaration', 'local_variable_declaration', 'declaration', 'let_declaration'
+        'var_declaration', 'local_variable_declaration', 'declaration', 'let_declaration',
+        'use_declaration'
     ]
-    
     if node.start_point and node.type in key_node_types:
         result["source"] = {"file": file_path or "unknown", "line": node.start_point[0] + 1}
     
-    # Extract variables
     vars = extract_variables(node)
     if vars:
         result["variables"] = vars
     
-    # Leaf node types across languages (nodes that don't need further processing)
     leaf_types = [
-        # Common
         'identifier', 'string', 'integer', 'float', 'boolean', 'true', 'false', 'null', 'number', 'character',
-        'dotted_name', 'argument_list', 'parameters',
-        
-        # Language specific
-        'string_literal', 'numeric_literal', 'boolean_literal', 'nil', 'nil_literal',
-        'raw_string_literal', 'int_literal', 'float_literal', 'char_literal',
-        'parameter_list', 'formal_parameters', 'arguments', 'formal_parameter'
+        'dotted_name', 'argument_list', 'parameters', 'string_literal', 'numeric_literal', 'boolean_literal',
+        'nil', 'nil_literal', 'raw_string_literal', 'int_literal', 'float_literal', 'char_literal',
+        'parameter_list', 'formal_parameters', 'arguments', 'formal_parameter', 'scoped_identifier',
+        'use_list', 'token_tree', 'scoped_use_list', 'field_expression', 'type_identifier', 'await_expression'
     ]
     
-    # Structural node types that need special handling across languages
     structural_nodes = [
-        # Function calls
-        'call', 'call_expression', 'method_invocation', 'method_call',
-        
-        # Assignments
+        'call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation',
         'assignment', 'variable_declarator', 'assignment_expression', 'short_var_declaration',
         'var_declaration', 'local_variable_declaration', 'declaration', 'let_declaration',
-        
-        # Function definitions
         'function_definition', 'method_definition', 'function_declaration', 'method_declaration',
-        'function_item', 'constructor_declaration', 'arrow_function'
+        'function_item', 'constructor_declaration', 'arrow_function',
+        'use_declaration', 'struct_item', 'if_expression', 'match_expression', 'block', 'source_file',
+        'mod_item', 'attribute_item', 'match_arm', 'match_block', 'else_clause', 'let_condition'
     ]
     
-    # Expression statement wrappers across languages
     expression_statements = [
-        'expression_statement', 'stmt_expr', 'expression_stmt',
-        'simple_statement', 'expr_stmt'
+        'expression_statement', 'stmt_expr', 'expression_stmt', 'simple_statement', 'expr_stmt'
     ]
     
     if node.type not in leaf_types:
         named_children = [child for child in node.children if child.is_named]
         if named_children:
-            # Unwrap expression statements
             if node.type in expression_statements and len(named_children) == 1:
                 return node_to_dict(named_children[0], function_map, expanded_asts, modules_used, visited, file_path)
             elif node.type in structural_nodes:
-                # Handle function calls across languages
-                call_types = ['call', 'call_expression', 'method_invocation', 'method_call']
-                if node.type in call_types and resolve_function_call(node, function_map):
-                    called_ast = resolve_function_call(node, function_map)
-                    if called_ast:
-                        func_key = (called_ast.start_point, called_ast.end_point)
-                        file_path, func_name, param_count = next(
-                            k for k, v in function_map.items() if v == called_ast
-                        )
-                        ref_key = f"{file_path}:{func_name}:{param_count}"
-                        visited_key = (file_path, func_name, param_count)
-                        if func_key in expanded_asts:
-                            result["called_function"] = {"ref": ref_key}
-                        elif visited_key not in visited:
-                            visited.add(visited_key)
-                            expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, visited, file_path)
-                            if expanded_ast["type"] in [
-                                'function_definition', 'method_definition', 'function_declaration', 
-                                'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
-                            ]:
-                                expanded_ast["id"] = ref_key
-                            expanded_asts[func_key] = expanded_ast
-                            result["called_function"] = expanded_ast
-                        else:
-                            result["called_function"] = {"ref": ref_key}
-                # Handle function definitions across languages
+                if node.type == 'use_declaration':
+                    module_text = node.text.decode('utf-8').rstrip(';').replace("use ", "").rstrip(',')
+                    modules_used.add(module_text)
+                
+                elif node.type in ['call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation']:
+                    func = node.child_by_field_name('function') or (node.children[0] if node.type == 'macro_invocation' else None)
+                    if func:
+                        func_name = func.text.decode('utf-8').split('.')[0].split('(')[0]  # Simplify to base name
+                        result["function_call"] = func_name
+                        called_ast = resolve_function_call(node, function_map)
+                        if called_ast:
+                            func_key = (called_ast.start_point, called_ast.end_point)
+                            file_path, func_name, param_count = next(k for k, v in function_map.items() if v == called_ast)
+                            ref_key = f"{file_path}:{func_name}:{param_count}"
+                            visited_key = (file_path, func_name, param_count)
+                            if func_key in expanded_asts:
+                                result["called_function"] = {"ref": ref_key}
+                            elif visited_key not in visited:
+                                visited.add(visited_key)
+                                expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, visited, file_path)
+                                if expanded_ast["type"] in [
+                                    'function_definition', 'method_definition', 'function_declaration', 
+                                    'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
+                                ]:
+                                    expanded_ast["id"] = ref_key
+                                expanded_asts[func_key] = expanded_ast
+                                result["called_function"] = expanded_ast
+                            else:
+                                result["called_function"] = {"ref": ref_key}
+                        elif not detect_vulnerabilities(node):
+                            result["is_library"] = True
+                
                 elif node.type in [
                     'function_definition', 'method_definition', 'function_declaration', 
                     'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
                 ]:
-                    result["children"] = []
-                    # Function body field names across languages
+                    name_node = node.child_by_field_name('name')
+                    if name_node:
+                        result["function_name"] = name_node.text.decode('utf-8')
+                    params = node.child_by_field_name('parameters')
+                    if params:
+                        result["param_count"] = sum(1 for c in params.children if c.type in ['parameter', 'identifier'])
                     body_field_names = ['body', 'block', 'value', 'statement']
-                    
-                    # Try different field names for function body
-                    block_node = None
-                    for field_name in body_field_names:
-                        block_node = node.child_by_field_name(field_name)
-                        if block_node:
-                            break
-                    
-                    # If still not found, try to find it by looking for a block type node
+                    block_node = next((node.child_by_field_name(f) for f in body_field_names if node.child_by_field_name(f)), None)
                     if not block_node:
                         for child in named_children:
                             if child.type in ['block', 'compound_statement', 'block_statement']:
                                 block_node = child
                                 break
-                    
                     if block_node:
-                        for block_child in block_node.children:
-                            if block_child.is_named and block_child.type not in comment_types:
-                                child_dict = node_to_dict(block_child, function_map, expanded_asts, modules_used, visited, file_path)
-                                if child_dict:
-                                    if child_dict["type"] in expression_statements and "children" in child_dict and len(child_dict["children"]) == 1:
-                                        result["children"].append(child_dict["children"][0])
-                                    else:
-                                        result["children"].append(child_dict)
-            else:
-                result["children"] = []
-                for child in named_children:
-                    child_dict = node_to_dict(child, function_map, expanded_asts, modules_used, visited, file_path)
-                    if child_dict:
-                        result["children"].append(child_dict)
+                        result["children"] = [
+                            node_to_dict(child, function_map, expanded_asts, modules_used, visited, file_path)
+                            for child in block_node.children if child.is_named and child.type not in comment_types
+                        ]
+                
+                if "children" not in result:
+                    result["children"] = [
+                        node_to_dict(child, function_map, expanded_asts, modules_used, visited, file_path)
+                        for child in named_children if child.type not in leaf_types
+                    ]
+            result["children"] = [c for c in result.get("children", []) if c]  # Filter None, avoid empty arrays
     
-    # Detect vulnerabilities
     vulnerabilities = detect_vulnerabilities(node)
     if vulnerabilities:
         result["vulnerabilities"] = vulnerabilities
     
-    # Mark library calls
-    call_types = ['call', 'call_expression', 'method_invocation', 'method_call']
-    if node.type in call_types and not resolve_function_call(node, function_map) and not result.get("vulnerabilities"):
-        result["is_library"] = True
-    
-    return result
+    return result if result.get("children") or result.get("Text") or result.get("function_call") or result.get("variables") else None
+
+
 def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     """Generate expanded AST for the entrypoint using all project ASTs."""
     ast_map, function_map = parse_all_files(project_dir)

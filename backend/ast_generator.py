@@ -38,6 +38,7 @@ def parse_all_files(project_dir):
                 if lang in LANGUAGE_MAPPING:
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         code = f.read()
+                    # print(Language(LANGUAGE_MAPPING[lang]),lang)
                     parser = Parser(Language(LANGUAGE_MAPPING[lang]))
                     tree = parser.parse(bytes(code, "utf-8"))
                     ast_map[file_path] = tree.root_node
@@ -71,7 +72,7 @@ def parse_all_files(project_dir):
                                     param_types = ['identifier', 'parameter', 'formal_parameter', 'simple_parameter']
                                     param_count = sum(1 for child in params_node.children if child.type in param_types)
                                 function_map[(file_path, qualified_name, param_count)] = node
-                                print(f"Mapped: {(file_path, qualified_name, param_count)}")
+                                # print(f"Mapped: {(file_path, qualified_name, param_count)}")
     return ast_map, function_map
 
 
@@ -258,27 +259,27 @@ def resolve_function_call(call_node, function_map):
     args = next((call_node.child_by_field_name(f) for f in arg_field_names if call_node.child_by_field_name(f)), None)
     arg_count = 0
     if args:
-        arg_types = ['identifier', 'expression', 'literal', 'call_expression', 'binary_expression']
-        arg_count = sum(1 for child in args.children if child.type in arg_types and child.is_named)
+        # Count all named children as arguments
+        arg_count = sum(1 for child in args.children if child.is_named)
     
     # Try full name, base name, and constructor-like (e.g., Gemini::parse → GeminiModel::new)
     for (file_path, name, param_count), def_node in function_map.items():
         if param_count == arg_count:
             if name == full_func_name or name.endswith(f"::{base_func_name}"):
-                print(f"Resolved: {full_func_name} → {(file_path, name, param_count)}")
+                # print(f"Resolved: {full_func_name} → {(file_path, name, param_count)}")
                 return def_node
             # Constructor heuristic: if call is "Type::func", check "TypeModel::func" or "Type::new"
             type_prefix = full_func_name.split('::')[0]
             if name.startswith(f"{type_prefix}Model::") or name == f"{type_prefix}::new":
-                print(f"Resolved (constructor): {full_func_name} → {(file_path, name, param_count)}")
+                # print(f"Resolved (constructor): {full_func_name} → {(file_path, name, param_count)}")
                 return def_node
     
-    print(f"Unresolved: {full_func_name} with {arg_count} args")
+    # print(f"Unresolved: {full_func_name} with {arg_count} args")
     return None
 
 
-def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, file_path=None):
-    """Convert node to dict, expanding function calls recursively with cycle prevention."""
+def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_files, visited=None, file_path=None):
+    """Convert node to dict, expanding function calls recursively with cycle prevention and track referenced files."""
     if visited is None:
         visited = set()
     
@@ -287,7 +288,11 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, 
         return None
     
     result = {"type": node.type}
-    include_text_types = ['string_literal', 'identifier', 'use_declaration', 'mod_item', 'attribute_item']
+    # Expanded to include more leaf types with meaningful text
+    include_text_types = [
+        'string_literal', 'identifier', 'use_declaration', 'mod_item', 'attribute_item',
+        'dotted_name', 'integer', 'string', 'number'
+    ]
     if node.type in include_text_types:
         result["Text"] = node.text.decode("utf-8")
     
@@ -306,14 +311,6 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, 
     if vars:
         result["variables"] = vars
     
-    leaf_types = [
-        'identifier', 'string', 'integer', 'float', 'boolean', 'true', 'false', 'null', 'number', 'character',
-        'dotted_name', 'argument_list', 'parameters', 'string_literal', 'numeric_literal', 'boolean_literal',
-        'nil', 'nil_literal', 'raw_string_literal', 'int_literal', 'float_literal', 'char_literal',
-        'parameter_list', 'formal_parameters', 'arguments', 'formal_parameter', 'scoped_identifier',
-        'use_list', 'token_tree', 'scoped_use_list', 'field_expression', 'type_identifier', 'await_expression'
-    ]
-    
     structural_nodes = [
         'call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation',
         'assignment', 'variable_declarator', 'assignment_expression', 'short_var_declaration',
@@ -321,90 +318,98 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, visited=None, 
         'function_definition', 'method_definition', 'function_declaration', 'method_declaration',
         'function_item', 'constructor_declaration', 'arrow_function',
         'use_declaration', 'struct_item', 'if_expression', 'match_expression', 'block', 'source_file',
-        'mod_item', 'attribute_item', 'match_arm', 'match_block', 'else_clause', 'let_condition'
+        'mod_item', 'attribute_item', 'match_arm', 'match_block', 'else_clause', 'let_condition',
+        'module', 'import_statement', 'import_from_statement'  # Added for Python
     ]
     
     expression_statements = [
         'expression_statement', 'stmt_expr', 'expression_stmt', 'simple_statement', 'expr_stmt'
     ]
     
-    if node.type not in leaf_types:
-        named_children = [child for child in node.children if child.is_named]
-        if named_children:
-            if node.type in expression_statements and len(named_children) == 1:
-                return node_to_dict(named_children[0], function_map, expanded_asts, modules_used, visited, file_path)
-            elif node.type in structural_nodes:
-                if node.type == 'use_declaration':
-                    module_text = node.text.decode('utf-8').rstrip(';').replace("use ", "").rstrip(',')
-                    modules_used.add(module_text)
-                
-                elif node.type in ['call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation']:
-                    func = node.child_by_field_name('function') or (node.children[0] if node.type == 'macro_invocation' else None)
-                    if func:
-                        full_func_name = func.text.decode('utf-8')
-                        # Prioritize base function name before method chain
-                        base_name = full_func_name.split('(')[0].split('::')[-1].split('.')[0]
-                        result["function_call"] = base_name  # e.g., "os_type", "parse", "exit"
-                        called_ast = resolve_function_call(node, function_map)
-                        if called_ast:
-                            func_key = (called_ast.start_point, called_ast.end_point)
-                            file_path_key, defined_name, param_count = next(k for k, v in function_map.items() if v == called_ast)
-                            ref_key = f"{file_path_key}:{defined_name}:{param_count}"
-                            visited_key = (file_path_key, defined_name, param_count)
-                            if func_key in expanded_asts:
-                                result["called_function"] = {"ref": ref_key}
-                            elif visited_key not in visited:
-                                visited.add(visited_key)
-                                expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, visited, file_path_key)
-                                if expanded_ast["type"] in [
-                                    'function_definition', 'method_definition', 'function_declaration', 
-                                    'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
-                                ]:
-                                    expanded_ast["id"] = ref_key
-                                expanded_asts[func_key] = expanded_ast
-                                result["called_function"] = expanded_ast
-                            else:
-                                result["called_function"] = {"ref": ref_key}
-                        elif not detect_vulnerabilities(node):
-                            result["is_library"] = True
-                
-                elif node.type in [
-                    'function_definition', 'method_definition', 'function_declaration', 
-                    'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
-                ]:
-                    name_node = node.child_by_field_name('name')
-                    if name_node:
-                        result["function_name"] = name_node.text.decode('utf-8')
-                    params = node.child_by_field_name('parameters')
-                    if params:
-                        result["param_count"] = sum(1 for c in params.children if c.type in ['parameter', 'identifier'])
-                    body_field_names = ['body', 'block', 'value', 'statement']
-                    block_node = next((node.child_by_field_name(f) for f in body_field_names if node.child_by_field_name(f)), None)
-                    if not block_node:
-                        for child in named_children:
-                            if child.type in ['block', 'compound_statement', 'block_statement']:
-                                block_node = child
-                                break
-                    if block_node:
-                        result["children"] = [
-                            node_to_dict(child, function_map, expanded_asts, modules_used, visited, file_path)
-                            for child in block_node.children if child.is_named and child.type not in comment_types
-                        ]
-                
-                if "children" not in result:
+    named_children = [child for child in node.children if child.is_named]
+    if named_children:
+        if node.type in expression_statements and len(named_children) == 1:
+            return node_to_dict(named_children[0], function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
+        elif node.type in structural_nodes:
+            if node.type == 'use_declaration':
+                module_text = node.text.decode('utf-8').rstrip(';').replace("use ", "").rstrip(',')
+                modules_used.add(module_text)
+            elif node.type in ['import_statement', 'import_from_statement']:
+                # Extract module name for Python imports
+                module_node = node.child_by_field_name('module_name') or node.child_by_field_name('name')
+                if module_node and module_node.type == 'dotted_name':
+                    module_name = module_node.text.decode('utf-8')
+                    modules_used.add(module_name)
+            elif node.type in ['call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation']:
+                func = node.child_by_field_name('function') or (node.children[0] if node.type == 'macro_invocation' else None)
+                if func:
+                    full_func_name = func.text.decode('utf-8')
+                    base_name = full_func_name.split('(')[0].split('::')[-1].split('.')[0]
+                    result["function_call"] = base_name
+                    called_ast = resolve_function_call(node, function_map)
+                    if called_ast:
+                        # Existing function call expansion logic (unchanged)
+                        func_key = (called_ast.start_point, called_ast.end_point)
+                        file_path_key, defined_name, param_count = next(k for k, v in function_map.items() if v == called_ast)
+                        referenced_files.add(file_path_key)
+                        ref_key = f"{file_path_key}:{defined_name}:{param_count}"
+                        visited_key = (file_path_key, defined_name, param_count)
+                        if func_key in expanded_asts:
+                            result["called_function"] = {"ref": ref_key}
+                        elif visited_key not in visited:
+                            visited.add(visited_key)
+                            expanded_ast = node_to_dict(called_ast, function_map, expanded_asts, modules_used, referenced_files, visited, file_path_key)
+                            if expanded_ast["type"] in [
+                                'function_definition', 'method_definition', 'function_declaration', 
+                                'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
+                            ]:
+                                expanded_ast["id"] = ref_key
+                            expanded_asts[func_key] = expanded_ast
+                            result["called_function"] = expanded_ast
+                        else:
+                            result["called_function"] = {"ref": ref_key}
+                    elif not detect_vulnerabilities(node):
+                        result["is_library"] = True
+            elif node.type in [
+                'function_definition', 'method_definition', 'function_declaration', 
+                'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
+            ]:
+                # Existing function definition logic (unchanged)
+                name_node = node.child_by_field_name('name')
+                if name_node:
+                    result["function_name"] = name_node.text.decode('utf-8')
+                params = node.child_by_field_name('parameters')
+                if params:
+                    result["param_count"] = sum(1 for c in params.children if c.type in ['parameter', 'identifier'])
+                body_field_names = ['body', 'block', 'value', 'statement']
+                block_node = next((node.child_by_field_name(f) for f in body_field_names if node.child_by_field_name(f)), None)
+                if not block_node:
+                    for child in named_children:
+                        if child.type in ['block', 'compound_statement', 'block_statement']:
+                            block_node = child
+                            break
+                if block_node:
                     result["children"] = [
-                        node_to_dict(child, function_map, expanded_asts, modules_used, visited, file_path)
-                        for child in named_children if child.type not in leaf_types
+                        node_to_dict(child, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
+                        for child in block_node.children if child.is_named and child.type not in comment_types
                     ]
-            result["children"] = [c for c in result.get("children", []) if c]
-            if not result["children"]:
-                del result["children"]
+        
+        # Always process all named children
+        if "children" not in result:
+            result["children"] = [
+                node_to_dict(child, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
+                for child in named_children if child.type not in comment_types
+            ]
+        result["children"] = [c for c in result.get("children", []) if c]
+        if not result["children"]:
+            del result["children"]
     
     vulnerabilities = detect_vulnerabilities(node)
     if vulnerabilities:
         result["vulnerabilities"] = vulnerabilities
     
-    return result if result.get("children") or result.get("Text") or result.get("function_call") or result.get("variables") else None
+    # Always return result for non-comment nodes to preserve structure
+    return result
 
 
 def generate_project_asts(project_dir, entrypoint_file, output_file=None):
@@ -414,37 +419,45 @@ def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     # Check if entrypoint exists
     if entrypoint_file not in ast_map:
         raise ValueError(f"Entrypoint file '{entrypoint_file}' not found in project directory '{project_dir}'")
-    
+    # print(ast_map)
+    # for i in ast_map:
+    #     print(ast_map[i])
     main_ast = ast_map[entrypoint_file]
+    # print(main_ast)
     expanded_asts = {}
     modules_used = set()
+    referenced_files = set([entrypoint_file])  # Initialize with the entrypoint file
     
-    # Collect imports from all files
-    for root_node in ast_map.values():
+    # Generate the expanded AST and track referenced files
+    ast_dict = node_to_dict(main_ast, function_map, expanded_asts, modules_used, referenced_files, file_path=entrypoint_file)
+    # print("\n",main_ast,"\n", function_map,"\n", expanded_asts,"\n", modules_used,"\n", referenced_files,entrypoint_file)
+    # print(ast_dict)
+    # Collect imports from referenced files after expansion
+    for file_path in referenced_files:
+        root_node = ast_map[file_path]
         extract_imports(root_node, modules_used)
-    
-    # Pass file_path for the entrypoint
-    ast_dict = node_to_dict(main_ast, function_map, expanded_asts, modules_used, file_path=entrypoint_file)
     
     # Build the result dictionary
     ast_map_dict = {
         "main_ast": ast_dict,
-        "modules_used": sorted(list(modules_used))  # Ensure consistent order
+        "modules_used": sorted(list(modules_used)),  # Sorted for consistent output
+        "referenced_files": sorted(list(referenced_files))  # Include file names for visualization
     }
     
-    # Add other files' AST info (excluding entrypoint)
-    for file_path, root_node in ast_map.items():
+    # Optionally include ASTs for referenced files (unexpanded)
+    for file_path in referenced_files:
         if file_path != entrypoint_file:
             ast_map_dict[file_path] = {
-                "type": root_node.type,
-                "text": root_node.text.decode('utf-8')
+                "type": ast_map[file_path].type,
+                "text": ast_map[file_path].text.decode('utf-8')
             }
     
     # Use provided output file or default to a project-specific path
-    output_path = "/app/backend/sample_project/ast_output.json"
+    output_path = output_file or "/app/backend/sample_project/ast_output.json"
+    # print(ast_map_dict)
     save_ast_to_file(ast_map_dict, output_path)
     
-    return ast_map_dict  # Optional: return for further use
+    return ast_map_dict  # Return for further use or testing
 
 def save_ast_to_file(ast_map, filename):
     """Save the AST dictionary to a JSON file."""
@@ -452,6 +465,6 @@ def save_ast_to_file(ast_map, filename):
         json.dump(ast_map, f, indent=4)
     print(f"✅ ASTs saved to {filename}")
 
-project_dir = '/app/backend/Clearch/src'
-entrypoint_file = os.path.join(project_dir, 'main.rs')
+project_dir = '/app/backend'
+entrypoint_file = os.path.join(project_dir, 'ast_generator.py')
 generate_project_asts(project_dir, entrypoint_file)

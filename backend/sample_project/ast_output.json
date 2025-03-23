@@ -1,322 +1,264 @@
 {
     "main_ast": {
-        "type": "source_file",
+        "type": "module",
         "children": [
             {
-                "type": "use_declaration",
-                "Text": "use std::process;",
-                "source": {
-                    "file": "/app/backend/Clearch/src/main.rs",
-                    "line": 2
-                }
-            },
-            {
-                "type": "use_declaration",
-                "Text": "use clap::Parser;",
-                "source": {
-                    "file": "/app/backend/Clearch/src/main.rs",
-                    "line": 3
-                }
-            },
-            {
-                "type": "use_declaration",
-                "Text": "use sys_info::{linux_os_release, os_release, os_type};",
-                "source": {
-                    "file": "/app/backend/Clearch/src/main.rs",
-                    "line": 4
-                }
-            },
-            {
-                "type": "use_declaration",
-                "Text": "use llms::gpt::GPT4Model;",
-                "source": {
-                    "file": "/app/backend/Clearch/src/main.rs",
-                    "line": 5
-                }
-            },
-            {
-                "type": "mod_item",
-                "Text": "mod traits;"
-            },
-            {
-                "type": "mod_item",
-                "Text": "mod llms;"
-            },
-            {
-                "type": "attribute_item",
-                "Text": "#[derive(Parser)]"
-            },
-            {
-                "type": "attribute_item",
-                "Text": "#[command(\nname = \"Clearch\",\nauthor = \"Advaith Narayanan <advaith@glitchy.systems>\",\nabout = \"Search using the command line\",\nafter_help = \"Note: To redirect errors to stdout, use 2>&1.\\n\\\nExample usages:\\n\\\n- Provide a search query: clearch -q \\\"search term\\\"\\n\\\n- Redirect errors: clearch -q \\\"search term\\\" 2>&1\"\n)]"
-            },
-            {
-                "type": "attribute_item",
-                "Text": "#[tokio::main]"
-            },
-            {
-                "type": "function_item",
-                "source": {
-                    "file": "/app/backend/Clearch/src/main.rs",
-                    "line": 26
-                },
-                "function_name": "main",
-                "param_count": 0,
+                "type": "import_from_statement",
                 "children": [
                     {
-                        "type": "let_declaration",
-                        "source": {
-                            "file": "/app/backend/Clearch/src/main.rs",
-                            "line": 28
-                        },
-                        "variables": {
-                            "os_type": "os_type().unwrap_or_else(|_| \"Unknown\".to_string())"
-                        },
+                        "type": "dotted_name",
+                        "Text": "test",
                         "children": [
                             {
-                                "type": "call_expression",
-                                "source": {
-                                    "file": "/app/backend/Clearch/src/main.rs",
-                                    "line": 28
-                                },
-                                "function_call": "os_type",
-                                "is_library": true
+                                "type": "identifier",
+                                "Text": "test"
                             }
                         ]
                     },
                     {
-                        "type": "let_declaration",
-                        "source": {
-                            "file": "/app/backend/Clearch/src/main.rs",
-                            "line": 29
-                        },
-                        "variables": {
-                            "os_release": "os_release().unwrap_or_else(|_| \"Unknown\".to_string())"
-                        },
+                        "type": "dotted_name",
+                        "Text": "fd",
                         "children": [
                             {
-                                "type": "call_expression",
-                                "source": {
-                                    "file": "/app/backend/Clearch/src/main.rs",
-                                    "line": 29
-                                },
-                                "function_call": "os_release",
-                                "is_library": true
+                                "type": "identifier",
+                                "Text": "fd"
                             }
                         ]
-                    },
+                    }
+                ]
+            },
+            {
+                "type": "import_statement",
+                "children": [
                     {
-                        "type": "let_declaration",
-                        "source": {
-                            "file": "/app/backend/Clearch/src/main.rs",
-                            "line": 30
-                        },
-                        "variables": {
-                            "linux_distro": "linux_os_release()\n    .map(|info| info.pretty_name)\n    .unwrap_or(None)\n    .unwrap_or_else(|| \"Unknown\".to_string())"
-                        },
+                        "type": "dotted_name",
+                        "Text": "os",
                         "children": [
                             {
-                                "type": "call_expression",
-                                "source": {
-                                    "file": "/app/backend/Clearch/src/main.rs",
-                                    "line": 30
-                                },
-                                "function_call": "linux_os_release",
-                                "is_library": true
+                                "type": "identifier",
+                                "Text": "os"
                             }
                         ]
+                    }
+                ]
+            },
+            {
+                "type": "call",
+                "source": {
+                    "file": "/app/backend/sample_project/main.py",
+                    "line": 3
+                },
+                "function_call": "fd",
+                "called_function": {
+                    "type": "function_definition",
+                    "source": {
+                        "file": "/app/backend/sample_project/test.py",
+                        "line": 2
                     },
-                    {
-                        "type": "macro_invocation",
-                        "source": {
-                            "file": "/app/backend/Clearch/src/main.rs",
-                            "line": 35
-                        },
-                        "function_call": "println",
-                        "is_library": true
-                    },
-                    {
-                        "type": "let_declaration",
-                        "source": {
-                            "file": "/app/backend/Clearch/src/main.rs",
-                            "line": 41
-                        },
-                        "variables": {
-                            "search": "Gemini::parse()"
-                        },
-                        "children": [
-                            {
-                                "type": "call_expression",
-                                "source": {
-                                    "file": "/app/backend/Clearch/src/main.rs",
-                                    "line": 41
+                    "function_name": "fd",
+                    "param_count": 0,
+                    "children": [
+                        {
+                            "type": "call",
+                            "source": {
+                                "file": "/app/backend/sample_project/test.py",
+                                "line": 3
+                            },
+                            "function_call": "exec",
+                            "children": [
+                                {
+                                    "type": "identifier",
+                                    "Text": "exec"
                                 },
-                                "function_call": "parse",
-                                "is_library": true
-                            }
-                        ]
-                    },
-                    {
-                        "type": "let_declaration",
-                        "source": {
-                            "file": "/app/backend/Clearch/src/main.rs",
-                            "line": 44
-                        },
-                        "variables": {
-                            "gpt_model": "GPT4Model::new()"
-                        },
-                        "children": [
-                            {
-                                "type": "call_expression",
-                                "source": {
-                                    "file": "/app/backend/Clearch/src/main.rs",
-                                    "line": 44
-                                },
-                                "function_call": "new",
-                                "called_function": {
-                                    "type": "function_item",
-                                    "source": {
-                                        "file": "/app/backend/Clearch/src/llms/gpt.rs",
-                                        "line": 10
-                                    },
-                                    "function_name": "new",
-                                    "param_count": 0,
+                                {
+                                    "type": "argument_list",
                                     "children": [
                                         {
-                                            "type": "let_declaration",
-                                            "source": {
-                                                "file": "/app/backend/Clearch/src/llms/gpt.rs",
-                                                "line": 11
-                                            },
-                                            "variables": {
-                                                "api_key": "\"\".to_string()"
-                                            },
+                                            "type": "string",
+                                            "Text": "\"print('hedsadsallo')\"",
                                             "children": [
                                                 {
-                                                    "type": "call_expression",
-                                                    "source": {
-                                                        "file": "/app/backend/Clearch/src/llms/gpt.rs",
-                                                        "line": 11
-                                                    },
-                                                    "function_call": "\"\"",
-                                                    "is_library": true
+                                                    "type": "string_start"
+                                                },
+                                                {
+                                                    "type": "string_content"
+                                                },
+                                                {
+                                                    "type": "string_end"
                                                 }
                                             ]
                                         }
-                                    ],
-                                    "id": "/app/backend/Clearch/src/llms/gpt.rs:GPT4Model::new:0"
+                                    ]
                                 }
-                            }
-                        ]
-                    },
-                    {
-                        "type": "if_expression",
-                        "children": [
-                            {
-                                "type": "let_condition",
-                                "variables": {
-                                    "Some": "search.search_query"
+                            ],
+                            "vulnerabilities": [
+                                "Vulnerable function used: exec"
+                            ]
+                        },
+                        {
+                            "type": "call",
+                            "source": {
+                                "file": "/app/backend/sample_project/test.py",
+                                "line": 4
+                            },
+                            "function_call": "idk",
+                            "called_function": {
+                                "type": "function_definition",
+                                "source": {
+                                    "file": "/app/backend/sample_project/new.py",
+                                    "line": 2
                                 },
+                                "variables": {
+                                    "a": null,
+                                    "b": null,
+                                    "c": null
+                                },
+                                "function_name": "idk",
+                                "param_count": 3,
                                 "children": [
                                     {
-                                        "type": "tuple_struct_pattern",
-                                        "variables": {
-                                            "query": null
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                "type": "block",
-                                "children": [
-                                    {
-                                        "type": "macro_invocation",
+                                        "type": "call",
                                         "source": {
-                                            "file": "/app/backend/Clearch/src/main.rs",
-                                            "line": 47
+                                            "file": "/app/backend/sample_project/new.py",
+                                            "line": 3
                                         },
-                                        "function_call": "println",
-                                        "is_library": true
-                                    },
-                                    {
-                                        "type": "match_expression",
+                                        "function_call": "print",
+                                        "is_library": true,
                                         "children": [
                                             {
-                                                "type": "match_block",
-                                                "children": [
-                                                    {
-                                                        "type": "match_arm",
-                                                        "children": [
-                                                            {
-                                                                "type": "macro_invocation",
-                                                                "source": {
-                                                                    "file": "/app/backend/Clearch/src/main.rs",
-                                                                    "line": 51
-                                                                },
-                                                                "function_call": "println",
-                                                                "is_library": true
-                                                            }
-                                                        ]
-                                                    },
-                                                    {
-                                                        "type": "match_arm",
-                                                        "children": [
-                                                            {
-                                                                "type": "block",
-                                                                "children": [
-                                                                    {
-                                                                        "type": "macro_invocation",
-                                                                        "source": {
-                                                                            "file": "/app/backend/Clearch/src/main.rs",
-                                                                            "line": 53
-                                                                        },
-                                                                        "function_call": "eprintln",
-                                                                        "is_library": true
-                                                                    },
-                                                                    {
-                                                                        "type": "call_expression",
-                                                                        "source": {
-                                                                            "file": "/app/backend/Clearch/src/main.rs",
-                                                                            "line": 54
-                                                                        },
-                                                                        "function_call": "exit",
-                                                                        "is_library": true
-                                                                    }
-                                                                ]
-                                                            }
-                                                        ]
-                                                    }
-                                                ]
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                "type": "else_clause",
-                                "children": [
-                                    {
-                                        "type": "block",
-                                        "children": [
-                                            {
-                                                "type": "macro_invocation",
-                                                "source": {
-                                                    "file": "/app/backend/Clearch/src/main.rs",
-                                                    "line": 58
-                                                },
-                                                "function_call": "eprintln",
-                                                "is_library": true
+                                                "type": "identifier",
+                                                "Text": "print"
                                             },
                                             {
-                                                "type": "call_expression",
-                                                "source": {
-                                                    "file": "/app/backend/Clearch/src/main.rs",
-                                                    "line": 59
-                                                },
-                                                "function_call": "exit",
-                                                "is_library": true
+                                                "type": "argument_list"
                                             }
                                         ]
+                                    },
+                                    {
+                                        "type": "assignment",
+                                        "source": {
+                                            "file": "/app/backend/sample_project/new.py",
+                                            "line": 4
+                                        },
+                                        "variables": {
+                                            "x": "20"
+                                        },
+                                        "children": [
+                                            {
+                                                "type": "identifier",
+                                                "Text": "x"
+                                            },
+                                            {
+                                                "type": "integer",
+                                                "Text": "20"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "call",
+                                        "source": {
+                                            "file": "/app/backend/sample_project/new.py",
+                                            "line": 5
+                                        },
+                                        "function_call": "exec",
+                                        "children": [
+                                            {
+                                                "type": "identifier",
+                                                "Text": "exec"
+                                            },
+                                            {
+                                                "type": "argument_list"
+                                            }
+                                        ],
+                                        "vulnerabilities": [
+                                            "Vulnerable function used: exec"
+                                        ]
+                                    }
+                                ],
+                                "id": "/app/backend/sample_project/new.py:idk:3"
+                            },
+                            "children": [
+                                {
+                                    "type": "identifier",
+                                    "Text": "idk"
+                                },
+                                {
+                                    "type": "argument_list",
+                                    "children": [
+                                        {
+                                            "type": "integer",
+                                            "Text": "10"
+                                        },
+                                        {
+                                            "type": "integer",
+                                            "Text": "20"
+                                        },
+                                        {
+                                            "type": "integer",
+                                            "Text": "30"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "id": "/app/backend/sample_project/test.py:fd:0"
+                },
+                "children": [
+                    {
+                        "type": "identifier",
+                        "Text": "fd"
+                    },
+                    {
+                        "type": "argument_list"
+                    }
+                ]
+            },
+            {
+                "type": "assignment",
+                "source": {
+                    "file": "/app/backend/sample_project/main.py",
+                    "line": 4
+                },
+                "variables": {
+                    "x": "10"
+                },
+                "children": [
+                    {
+                        "type": "identifier",
+                        "Text": "x"
+                    },
+                    {
+                        "type": "integer",
+                        "Text": "10"
+                    }
+                ]
+            },
+            {
+                "type": "call",
+                "source": {
+                    "file": "/app/backend/sample_project/main.py",
+                    "line": 5
+                },
+                "function_call": "print",
+                "is_library": true,
+                "children": [
+                    {
+                        "type": "identifier",
+                        "Text": "print"
+                    },
+                    {
+                        "type": "argument_list",
+                        "children": [
+                            {
+                                "type": "string",
+                                "Text": "\"\"",
+                                "children": [
+                                    {
+                                        "type": "string_start"
+                                    },
+                                    {
+                                        "type": "string_end"
                                     }
                                 ]
                             }
@@ -327,38 +269,22 @@
         ]
     },
     "modules_used": [
-        "clap::Parser",
-        "crate::traits::LLMRequest",
-        "header",
         "json",
-        "linux_os_release",
-        "llms::gpt::GPT4Model",
-        "reqwest",
-        "reqwest::Client",
-        "serde_json",
-        "std::error::Error",
-        "std::process",
-        "sys_info",
-        "sys_info::{linux_os_release, os_release, os_type}"
+        "new",
+        "os",
+        "test"
     ],
-    "/app/backend/Clearch/src/traits.rs": {
-        "type": "source_file",
-        "text": "// src/traits.rs\n\nuse std::error::Error;\n\npub trait LLMRequest {\n    async fn req(&self, query: &str, fine: &str) -> Result<String, Box<dyn Error>>;\n    fn new(api_key: String) -> Self;\n}\n\n"
+    "referenced_files": [
+        "/app/backend/sample_project/main.py",
+        "/app/backend/sample_project/new.py",
+        "/app/backend/sample_project/test.py"
+    ],
+    "/app/backend/sample_project/test.py": {
+        "type": "module",
+        "text": "from new import idk\ndef fd():\n    exec(\"print('hedsadsallo')\")  # Triggers a vulnerability\n    idk(10,20,30)"
     },
-    "/app/backend/Clearch/src/llms/claude.rs": {
-        "type": "source_file",
-        "text": "use std::error::Error;\nuse reqwest::Client;\nuse crate::traits::LLMRequest;\n\nstruct ClaudeModel {\n    client: Client,\n    api_key: String,\n}\n\nimpl LLMRequest for ClaudeModel {\n    fn new(api_key: String) -> Self {\n        ClaudeModel{ client: Client::new(), api_key }\n    }\n    async fn req(&self, query: &str, fine: &str) -> Result<String, Box<dyn Error>> {\n        let url = \"https://api.anthropic.com/v1/completions\"; // The Claude API endpoint\n        let response = self.client.post(url)\n            .bearer_auth(&self.api_key)\n            .json(&serde_json::json!({\n                \"model\": fine, // Use the `fine` parameter for the model identifier\n                \"prompt\": query, // Use the `query` parameter for the prompt\n                \"max_tokens\": 100,\n            }))\n            .send()\n            .await?;\n    \n        let text = response.text().await?;\n        Ok(text)\n    }\n    \n}\n"
-    },
-    "/app/backend/Clearch/src/llms/gemini.rs": {
-        "type": "source_file",
-        "text": "use reqwest::{header, Client};\nuse serde_json::{json, Value};\nuse std::error::Error;\nuse crate::traits::LLMRequest;\n\n\npub struct GeminiModel {\n    api_key: String,\n    client: Client,\n}\n\nimpl LLMRequest for GeminiModel {\n    fn new(api_key: String) -> Self {\n        GeminiModel { client: Client::new(), api_key }\n    }\n\n    async fn req(&self, query: &str, fine: &str) -> Result<String, Box<dyn Error>> {\n        let map = json!({\n            \"contents\": [\n                {\n                    \"parts\": [\n                        {\n                            \"text\": format!(\"{} {}\", query, fine)\n                        }\n                    ]\n                }\n            ]\n        });\n       \n        let resp = self.client.post(format!(\"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={}\", self.api_key))\n            .header(header::CONTENT_TYPE, \"application/json\")\n            .json(&map)\n            .send()\n            .await?;\n\n        let json: Value = resp.json().await?;\n\n        if let Some(candidate) = json[\"candidates\"].get(0) {\n            if let Some(content) = candidate[\"content\"][\"parts\"].get(0) {\n                if let Some(text) = content[\"text\"].as_str() {\n                    println!(\"{}\", text);\n                    return Ok(text.to_string()); \n                }\n            }\n        }\n        Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, \"Invalid\")))\n    }\n}\n\n\n\n\n"
-    },
-    "/app/backend/Clearch/src/llms/gpt.rs": {
-        "type": "source_file",
-        "text": "use reqwest::Client;\nuse crate::traits::LLMRequest;\n\npub struct GPT4Model {\n    client: Client,\n    api_key: String,\n}\n\nimpl GPT4Model {\n    pub fn new() -> Self {\n        let api_key = \"\".to_string(); // Replace with your actual API key\n        GPT4Model {\n            client: Client::new(),\n            api_key,\n        }\n    }\n\n    pub async fn req(&self, prompt: &str) -> Result<String, reqwest::Error> {\n        let url = \"https://api.openai.com/v1/completions\";\n        let response = self.client.post(url)\n        .bearer_auth(&self.api_key)\n        .json(&serde_json::json!({\n            \"model\": \"gpt-3.5\",\n            \"prompt\": prompt,\n            \"max_tokens\": 100,\n        }))\n        .send()\n        .await?\n        .text()\n        .await?;\n        Ok(response)\n    }\n}\n\n"
-    },
-    "/app/backend/Clearch/src/llms/mod.rs": {
-        "type": "source_file",
-        "text": "// src/llms/mod.rs\npub mod claude;\npub mod gemini;\npub mod gpt; // This ensures that gpt.rs is exposed\n"
+    "/app/backend/sample_project/new.py": {
+        "type": "module",
+        "text": "import json\ndef idk(a,b,c):\n    print()\n    x=20\n    exec()"
     }
 }

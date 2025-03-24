@@ -288,28 +288,30 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
         return None
     
     result = {"type": node.type}
-    # Expanded to include more leaf types with meaningful text
-    include_text_types = [
-        'string_literal', 'identifier', 'use_declaration', 'mod_item', 'attribute_item',
-        'dotted_name', 'integer', 'string', 'number'
+    
+    # Expanded leaf nodes to stop unnecessary child expansion
+    leaf_types = [
+        'string_literal', 'identifier', 'integer', 'string', 'number', 'token_tree'
     ]
-    if node.type in include_text_types:
+    if node.type in leaf_types:
         result["Text"] = node.text.decode("utf-8")
+        return result  # Stop recursion here
+    
+    # Nodes where text is sufficient and children can be skipped
+    text_sufficient_types = ['use_declaration', 'mod_item', 'attribute_item', 'dotted_name']
+    if node.type in text_sufficient_types:
+        result["Text"] = node.text.decode("utf-8")
+        return result  # Skip children entirely if Text is present
     
     key_node_types = [
         'function_definition', 'method_definition', 'function_declaration', 'method_declaration',
         'function_item', 'constructor_declaration', 'arrow_function',
         'call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation',
         'assignment', 'variable_declarator', 'assignment_expression', 'short_var_declaration',
-        'var_declaration', 'local_variable_declaration', 'declaration', 'let_declaration',
-        'use_declaration'
+        'var_declaration', 'local_variable_declaration', 'declaration', 'let_declaration'
     ]
     if node.start_point and node.type in key_node_types:
         result["source"] = {"file": file_path or "unknown", "line": node.start_point[0] + 1}
-    
-    vars = extract_variables(node)
-    if vars:
-        result["variables"] = vars
     
     structural_nodes = [
         'call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation',
@@ -317,9 +319,9 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
         'var_declaration', 'local_variable_declaration', 'declaration', 'let_declaration',
         'function_definition', 'method_definition', 'function_declaration', 'method_declaration',
         'function_item', 'constructor_declaration', 'arrow_function',
-        'use_declaration', 'struct_item', 'if_expression', 'match_expression', 'block', 'source_file',
-        'mod_item', 'attribute_item', 'match_arm', 'match_block', 'else_clause', 'let_condition',
-        'module', 'import_statement', 'import_from_statement'  # Added for Python
+        'struct_item', 'if_expression', 'match_expression', 'block', 'source_file',
+        'match_arm', 'match_block', 'else_clause', 'let_condition',
+        'module', 'import_statement', 'import_from_statement'
     ]
     
     expression_statements = [
@@ -331,16 +333,7 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
         if node.type in expression_statements and len(named_children) == 1:
             return node_to_dict(named_children[0], function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
         elif node.type in structural_nodes:
-            if node.type == 'use_declaration':
-                module_text = node.text.decode('utf-8').rstrip(';').replace("use ", "").rstrip(',')
-                modules_used.add(module_text)
-            elif node.type in ['import_statement', 'import_from_statement']:
-                # Extract module name for Python imports
-                module_node = node.child_by_field_name('module_name') or node.child_by_field_name('name')
-                if module_node and module_node.type == 'dotted_name':
-                    module_name = module_node.text.decode('utf-8')
-                    modules_used.add(module_name)
-            elif node.type in ['call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation']:
+            if node.type in ['call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation']:
                 func = node.child_by_field_name('function') or (node.children[0] if node.type == 'macro_invocation' else None)
                 if func:
                     full_func_name = func.text.decode('utf-8')
@@ -348,7 +341,6 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
                     result["function_call"] = base_name
                     called_ast = resolve_function_call(node, function_map)
                     if called_ast:
-                        # Existing function call expansion logic (unchanged)
                         func_key = (called_ast.start_point, called_ast.end_point)
                         file_path_key, defined_name, param_count = next(k for k, v in function_map.items() if v == called_ast)
                         referenced_files.add(file_path_key)
@@ -370,11 +362,24 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
                             result["called_function"] = {"ref": ref_key}
                     elif not detect_vulnerabilities(node):
                         result["is_library"] = True
+                    # Flatten scoped_identifier for function calls
+                    if func.type == 'scoped_identifier':
+                        result["function_call"] = func.text.decode('utf-8')
+                    # Simplify arguments
+                    args = node.child_by_field_name('arguments')
+                    if args:
+                        args_children = [c for c in args.children if c.is_named]
+                        if len(args_children) == 1 and args_children[0].type in leaf_types:
+                            result["arguments"] = {"Text": args_children[0].text.decode('utf-8')}
+                        elif args_children:
+                            result["arguments"] = [
+                                node_to_dict(c, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
+                                for c in args_children if c.type not in comment_types
+                            ]
             elif node.type in [
                 'function_definition', 'method_definition', 'function_declaration', 
                 'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
             ]:
-                # Existing function definition logic (unchanged)
                 name_node = node.child_by_field_name('name')
                 if name_node:
                     result["function_name"] = name_node.text.decode('utf-8')
@@ -393,9 +398,15 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
                         node_to_dict(child, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
                         for child in block_node.children if child.is_named and child.type not in comment_types
                     ]
+            # Handle imports for module tracking (moved from use_declaration)
+            elif node.type in ['import_statement', 'import_from_statement']:
+                module_node = node.child_by_field_name('module_name') or node.child_by_field_name('name')
+                if module_node and module_node.type == 'dotted_name':
+                    module_name = module_node.text.decode('utf-8')
+                    modules_used.add(module_name)
         
-        # Always process all named children
-        if "children" not in result:
+        # Process children for non-leaf structural nodes
+        if "children" not in result and "arguments" not in result:
             result["children"] = [
                 node_to_dict(child, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
                 for child in named_children if child.type not in comment_types
@@ -408,7 +419,6 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
     if vulnerabilities:
         result["vulnerabilities"] = vulnerabilities
     
-    # Always return result for non-comment nodes to preserve structure
     return result
 
 
@@ -445,12 +455,12 @@ def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     }
     
     # Optionally include ASTs for referenced files (unexpanded)
-    for file_path in referenced_files:
-        if file_path != entrypoint_file:
-            ast_map_dict[file_path] = {
-                "type": ast_map[file_path].type,
-                "text": ast_map[file_path].text.decode('utf-8')
-            }
+    # for file_path in referenced_files:
+    #     if file_path != entrypoint_file:
+    #         ast_map_dict[file_path] = {
+    #             "type": ast_map[file_path].type,
+    #             "text": ast_map[file_path].text.decode('utf-8')
+    #         }
     
     # Use provided output file or default to a project-specific path
     output_path = output_file or "/app/backend/sample_project/ast_output.json"
@@ -465,6 +475,3 @@ def save_ast_to_file(ast_map, filename):
         json.dump(ast_map, f, indent=4)
     print(f"✅ ASTs saved to {filename}")
 
-project_dir = '/app/backend'
-entrypoint_file = os.path.join(project_dir, 'ast_generator.py')
-generate_project_asts(project_dir, entrypoint_file)

@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 import os
-from analyzer import analyze_project
+# from analyzer import analyze_project
 from logger import logger
-
+from ast_generator import generate_project_asts
 app = Flask(__name__)
 
 @app.route('/health')
@@ -26,9 +26,9 @@ def analyze():
     logger.info(f"Received analyze request for {project_dir}")
     
     # Run analysis
-    result = analyze_project(project_dir)
+    # result = analyze_project(project_dir)
     
-    return jsonify(result)
+    return jsonify("")
 
 @app.route('/ast', methods=['GET'])
 def get_ast():
@@ -51,4 +51,8 @@ def get_ast():
         return jsonify({"error": f"Error reading AST file: {str(e)}"}), 500
 
 if __name__ == '__main__':
+    project_dir = '/app/backend/Clearch/src'
+    entrypoint_file = os.path.join(project_dir, 'main.rs')
+    print(entrypoint_file)
+    generate_project_asts(project_dir, entrypoint_file)
     app.run(host='0.0.0.0', port=5000)

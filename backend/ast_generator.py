@@ -276,9 +276,256 @@ def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     output_path = output_file or "/app/backend/sample_project/ast_output.json"
     # print(ast_map_dict)
     save_ast_to_file(ast_map_dict, output_path)
-    
+    print(extract_ast_details(ast_map_dict,entrypoint_file))
     return ast_map_dict  # Return for further use or testing
+def extract_ast_details(ast, file_path):
+    """
+    Extract comprehensive details from an AST for visualization.
+    
+    Args:
+        ast (dict): The AST dictionary containing 'main_ast', 'modules_used', and 'referenced_files'.
+        file_path (str): The file path of the primary source file.
+    
+    Returns:
+        dict: A dictionary with all extracted details for visualization.
+    """
+    # Initialize data structures
+    functions = []
+    modules = ast.get('modules_used', [])
+    dataflow = []
+    variables = []
+    vulnerabilities = []
+    comments = []
 
+    # Visualization aids
+    colors = {
+        'function': 'green',
+        'variable': 'blue',
+        'vulnerability': 'red',
+        'module': 'yellow',
+        'comment': 'gray',
+        'literal': 'purple'
+    }
+    tooltips = {}
+
+    # Common node types across languages (Tree-sitter compatible)
+    function_types = {
+        'function_definition', 'function_item', 'method_definition', 'function_declaration',
+        'def_statement', 'lambda', 'async_function'
+    }
+    module_types = {
+        'use_declaration', 'import_statement', 'mod_item', 'import_from_statement',
+        'import_declaration', 'require_call'
+    }
+    assignment_types = {
+        'let_declaration', 'assignment', 'variable_declarator', 'assignment_expression',
+        'variable_declaration', 'local_variable_declaration'
+    }
+    call_types = {
+        'call', 'call_expression', 'method_invocation', 'method_call', 'macro_invocation',
+        'function_call'
+    }
+    comment_types = {
+        'comment', 'line_comment', 'block_comment', 'documentation_comment'
+    }
+    literal_types = {
+        'string_literal', 'integer', 'number', 'float', 'boolean', 'null', 'none'
+    }
+
+    def traverse(node, parent_id=None, depth=0, current_source=None, current_function_id=None):
+        """
+        Recursively traverse the AST to extract details.
+        
+        Args:
+            node (dict): Current AST node.
+            parent_id (str): ID of the parent node.
+            depth (int): Current depth in the tree.
+            current_source (dict): Source info from the nearest ancestor with 'source'.
+            current_function_id (str): ID of the enclosing function.
+        """
+        # Update current_source if node has source info
+        if 'source' in node:
+            current_source = node['source']
+        # Generate a unique node ID
+        node_id = (
+            f"{current_source['file']}:{node.start_point[0]}_{node.start_point[1]}"
+            if (current_source and 'start_point' in node)
+            else f"unknown:{depth}_{id(node)}"
+        )
+
+        # **Comments**
+        if node['type'] in comment_types:
+            line = node.start_point[0] + 1 if 'start_point' in node else 0
+            text = node.get('Text', '')
+            comments.append({
+                'id': node_id,
+                'text': text,
+                'file': current_source['file'] if current_source else file_path,
+                'line': line,
+                'depth': depth
+            })
+            tooltips[node_id] = f"Comment: {text}\nLine: {line}"
+            return
+
+        # **Functions**
+        if node['type'] in function_types:
+            func_name = node.get('function_name', 'unnamed')
+            line = current_source.get('line', 0) if current_source else 0
+            # Extract parameters (fallback to param_count or children)
+            params = []
+            if 'param_count' in node:
+                params = [f"param_{i}" for i in range(node['param_count'])]
+            else:
+                for child in node.get('children', []):
+                    if child['type'] in {'parameter', 'parameters', 'parameter_list'}:
+                        for p in child.get('children', []):
+                            if p['type'] == 'identifier':
+                                params.append(p.get('Text', 'unnamed'))
+            functions.append({
+                'id': node_id,
+                'name': func_name,
+                'file': current_source['file'] if current_source else file_path,
+                'line': line,
+                'parameters': params,
+                'depth': depth,
+                'calls': []  # Populated later via dataflow
+            })
+            tooltips[node_id] = (
+                f"Function: {func_name}\n"
+                f"Parameters: {', '.join(params) if params else 'None'}\n"
+                f"File: {current_source['file'] if current_source else file_path}\n"
+                f"Line: {line}"
+            )
+            current_function_id = node_id
+
+        # **Variables and Assignments**
+        if node['type'] in assignment_types:
+            var_name = None
+            var_id = None
+            value = None
+            line = current_source.get('line', 0) if current_source else 0
+            for child in node.get('children', []):
+                if child['type'] == 'identifier' and not var_name:
+                    var_name = child.get('Text', '')
+                    var_id = f"{var_name}@{line}"
+                    variables.append({
+                        'id': var_id,
+                        'name': var_name,
+                        'file': current_source['file'] if current_source else file_path,
+                        'line': line,
+                        'function': current_function_id,
+                        'depth': depth
+                    })
+                    tooltips[var_id] = (
+                        f"Variable: {var_name}\n"
+                        f"Line: {line}\n"
+                        f"Function: {current_function_id or 'global'}"
+                    )
+                elif child['type'] in literal_types:
+                    value = {'type': 'literal', 'value': child.get('Text', ''), 'node': child}
+                elif child['type'] in call_types:
+                    called_func = child.get('function_call', 'unknown_call')
+                    value = {'type': 'call', 'function': called_func, 'node': child}
+                elif child['type'] == 'identifier' and var_name:  # RHS variable
+                    value = {'type': 'variable', 'name': child.get('Text', ''), 'node': child}
+
+            if var_name and value:
+                if value['type'] == 'literal':
+                    val_id = f"literal@{line}_{id(value['node'])}"
+                    variables[-1]['assigned_value'] = value['value']
+                    tooltips[var_id] += f"\nAssigned: {value['value']}"
+                elif value['type'] == 'call':
+                    dataflow.append({
+                        'from': value['function'],  # Function name, resolved later
+                        'to': var_id,
+                        'type': 'assignment_call',
+                        'line': line
+                    })
+                    tooltips[var_id] += f"\nAssigned from call: {value['function']}"
+                elif value['type'] == 'variable':
+                    val_id = f"{value['name']}@{line}"
+                    dataflow.append({
+                        'from': val_id,
+                        'to': var_id,
+                        'type': 'assignment_var',
+                        'line': line
+                    })
+                    tooltips[var_id] += f"\nAssigned from: {value['name']}"
+
+        # **Function Calls**
+        if node['type'] in call_types and current_function_id:
+            called_func = node.get('function_call', 'unknown_call')
+            line = current_source.get('line', 0) if current_source else 0
+            call_id = f"call_{called_func}@{line}_{id(node)}"
+            dataflow.append({
+                'from': current_function_id,
+                'to': called_func,  # Function name, resolved later
+                'type': 'call',
+                'line': line
+            })
+            # Add to function's calls list (if function exists)
+            for func in functions:
+                if func['id'] == current_function_id:
+                    func['calls'].append(called_func)
+            tooltips[call_id] = (
+                f"Call to: {called_func}\n"
+                f"From Function: {current_function_id}\n"
+                f"Line: {line}"
+            )
+
+        # **Vulnerabilities**
+        if 'vulnerabilities' in node:
+            line = current_source.get('line', 0) if current_source else 0
+            for vuln in node['vulnerabilities']:
+                vuln_id = f"vuln@{line}_{id(node)}_{len(vulnerabilities)}"
+                vulnerabilities.append({
+                    'id': vuln_id,
+                    'description': vuln,
+                    'node_id': node_id,
+                    'file': current_source['file'] if current_source else file_path,
+                    'line': line,
+                    'depth': depth
+                })
+                tooltips[vuln_id] = f"Vulnerability: {vuln}\nLine: {line}"
+                # Attach to associated node
+                if node['type'] in function_types:
+                    for func in functions:
+                        if func['id'] == node_id:
+                            func.setdefault('vulnerabilities', []).append(vuln)
+                elif var_id:
+                    for var in variables:
+                        if var['id'] == var_id:
+                            var.setdefault('vulnerabilities', []).append(vuln)
+
+        # Recurse through children
+        for child in node.get('children', []):
+            traverse(child, node_id, depth + 1, current_source, current_function_id)
+
+    # Start traversal
+    
+    traverse(ast['main_ast'], file_path)
+
+    # Resolve function call references (map function names to IDs where possible)
+    function_map = {func['name']: func['id'] for func in functions}
+    for edge in dataflow:
+        if edge['to'] in function_map:
+            edge['to'] = function_map[edge['to']]
+        if edge['from'] in function_map:
+            edge['from'] = function_map[edge['from']]
+
+    return {
+        'functions': functions,
+        'modules': modules,
+        'dataflow': dataflow,
+        'variables': variables,
+        'vulnerabilities': vulnerabilities,
+        'comments': comments,
+        'colors': colors,
+        'tooltips': tooltips,
+        'referenced_files': ast.get('referenced_files', [])
+    }
+
+eval("1+2")
 def save_ast_to_file(ast_map, filename):
     """Save the AST dictionary to a JSON file."""
     with open(filename, 'w', encoding='utf-8') as f:

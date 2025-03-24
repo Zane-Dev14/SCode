@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 import os
 # from analyzer import analyze_project
-from logger import logger
 from ast_generator import generate_project_asts
 app = Flask(__name__)
 
@@ -23,7 +22,6 @@ def analyze():
     if not os.path.isdir(project_dir):
         return jsonify({"error": f"Directory {project_dir} does not exist"}), 400
     
-    logger.info(f"Received analyze request for {project_dir}")
     
     # Run analysis
     # result = analyze_project(project_dir)
@@ -47,12 +45,11 @@ def get_ast():
         # Return the AST for the specified file
         return jsonify(ast_data)
     except Exception as e:
-        logger.error(f"Error reading AST file: {str(e)}")
         return jsonify({"error": f"Error reading AST file: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    project_dir = '/app/backend/Clearch/src'
-    entrypoint_file = os.path.join(project_dir, 'main.rs')
+    project_dir = '/app/backend'
+    entrypoint_file = os.path.join(project_dir, 'api.py')
     print(entrypoint_file)
     generate_project_asts(project_dir, entrypoint_file)
     app.run(host='0.0.0.0', port=5000)

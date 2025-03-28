@@ -48,8 +48,8 @@ def get_ast():
         return jsonify({"error": f"Error reading AST file: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    project_dir = '/app/backend/sample_project'
-    entrypoint_file = os.path.join(project_dir, 'main.py')
+    project_dir = '/app/backend/CareerKraft'
+    entrypoint_file = os.path.join(project_dir, 'app.py')
     print(entrypoint_file)
     generate_project_asts(project_dir, entrypoint_file)
     app.run(host='0.0.0.0', port=5000)

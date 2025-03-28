@@ -203,11 +203,22 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
                         if child.type in ['block', 'compound_statement', 'block_statement']:
                             block_node = child
                             break
+                # Reclassify string nodes as documentation_comment if they are the first child (likely a docstring)
+                if "children" in result and result["children"] and result["children"][0]["type"] == "string":
+                    result["children"][0]["type"] = "documentation_comment"
                 if block_node:
                     result["children"] = [
                         node_to_dict(child, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
-                        for child in block_node.children if child.is_named and child.type not in comment_types
+                        for child in block_node.children if child.is_named
                     ]
+                    # Check for docstring as the first child and reclassify it with its own source info
+                    if "children" in result and result["children"] and result["children"][0]["type"] == "string":
+                        docstring_node = result["children"][0]
+                        docstring_node["type"] = "documentation_comment"
+                        # Use the docstring's actual start point if available, otherwise offset from function start
+                        first_child = block_node.children[0] if block_node.children else None
+                        docstring_line = first_child.start_point[0] + 1 if first_child and first_child.is_named else result["source"]["line"] + 1
+                        docstring_node["source"] = {"file": file_path or "unknown", "line": docstring_line}
             # Handle imports for module tracking (moved from use_declaration)
             elif node.type in ['import_statement', 'import_from_statement']:
                 module_node = node.child_by_field_name('module_name') or node.child_by_field_name('name')
@@ -219,7 +230,7 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
         if "children" not in result and "arguments" not in result:
             result["children"] = [
                 node_to_dict(child, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
-                for child in named_children if child.type not in comment_types
+                for child in named_children
             ]
         result["children"] = [c for c in result.get("children", []) if c]
         if not result["children"]:
@@ -278,6 +289,7 @@ def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     save_ast_to_file(ast_map_dict, output_path)
     print(extract_ast_details(ast_map_dict,entrypoint_file))
     return ast_map_dict  # Return for further use or testing
+
 def extract_ast_details(ast, file_path):
     """
     Extract comprehensive details from an AST for visualization.
@@ -348,8 +360,8 @@ def extract_ast_details(ast, file_path):
             current_source = node['source']
         # Generate a unique node ID
         node_id = (
-            f"{current_source['file']}:{node.start_point[0]}_{node.start_point[1]}"
-            if (current_source and 'start_point' in node)
+            f"{current_source['file']}:{current_source['line']}_0"
+            if current_source and 'line' in current_source
             else f"unknown:{depth}_{id(node)}"
         )
 
@@ -467,9 +479,10 @@ def extract_ast_details(ast, file_path):
             for func in functions:
                 if func['id'] == current_function_id:
                     func['calls'].append(called_func)
+            func_name = next((func['name'] for func in functions if func['id'] == current_function_id), 'unknown')
             tooltips[call_id] = (
                 f"Call to: {called_func}\n"
-                f"From Function: {current_function_id}\n"
+                f"From Function: {func_name} ({current_function_id})\n"
                 f"Line: {line}"
             )
 
@@ -514,18 +527,17 @@ def extract_ast_details(ast, file_path):
             edge['from'] = function_map[edge['from']]
 
     return {
-        'functions': functions,
-        'modules': modules,
-        'dataflow': dataflow,
-        'variables': variables,
-        'vulnerabilities': vulnerabilities,
-        'comments': comments,
-        'colors': colors,
-        'tooltips': tooltips,
-        'referenced_files': ast.get('referenced_files', [])
+        "functions": functions,
+        "modules": modules,
+        "dataflow": dataflow,
+        "variables": variables,
+        "vulnerabilities": vulnerabilities,
+        "comments": comments,
+        "colors": colors,
+        "tooltips": tooltips,
+        "referenced_files": ast.get('referenced_files', [])
     }
 
-eval("1+2")
 def save_ast_to_file(ast_map, filename):
     """Save the AST dictionary to a JSON file."""
     with open(filename, 'w', encoding='utf-8') as f:

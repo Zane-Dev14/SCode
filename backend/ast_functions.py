@@ -140,8 +140,7 @@ def resolve_function_call(call_node, function_map):
         return None
     
     full_func_name = func_part.text.decode('utf-8')  # e.g., "Gemini::parse"
-    base_func_name = full_func_name.split('::')[-1].split('.')[-1]  # e.g., "parse"
-    
+    base_func_name = full_func_name.split('::')[-1].split('.')[-1]  # e.g., "parse")
     arg_field_names = ['arguments', 'argument_list', 'args']
     args = next((call_node.child_by_field_name(f) for f in arg_field_names if call_node.child_by_field_name(f)), None)
     arg_count = 0
@@ -160,8 +159,7 @@ def resolve_function_call(call_node, function_map):
             if name.startswith(f"{type_prefix}Model::") or name == f"{type_prefix}::new":
                 # print(f"Resolved (constructor): {full_func_name} → {(file_path, name, param_count)}")
                 return def_node
-    
-    # print(f"Unresolved: {full_func_name} with {arg_count} args")
+    print(f"Unresolved: {full_func_name} with {arg_count} args")
     return None
 
 

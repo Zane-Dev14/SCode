@@ -42,7 +42,7 @@ def parse_all_files(project_dir):
                 if lang in LANGUAGE_MAPPING:
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         code = f.read()
-                    # print(Language(LANGUAGE_MAPPING[lang]),lang)
+                    # Instantiate parser using the proper language mapping
                     parser = Parser(Language(LANGUAGE_MAPPING[lang]))
                     tree = parser.parse(bytes(code, "utf-8"))
                     ast_map[file_path] = tree.root_node
@@ -52,32 +52,58 @@ def parse_all_files(project_dir):
                             'method_declaration', 'constructor_declaration', 'arrow_function'
                         ]
                         if node.type in func_types:
-                            name_node = node.child_by_field_name('name')
+                            # For languages like C, C++ and Rust, try to extract the function name from 'declarator'
+                            if lang in ['c', 'cpp', 'rust']:
+                                declarator = node.child_by_field_name('declarator')
+                                func_name = None
+                                if declarator:
+                                    for child in declarator.children:
+                                        if child.type == 'identifier':
+                                            func_name = child.text.decode('utf-8')
+                                            break
+                                # If not found in declarator, fallback to the usual 'name' field.
+                                if not func_name:
+                                    name_node = node.child_by_field_name('name')
+                                    if name_node:
+                                        func_name = name_node.text.decode('utf-8')
+                                    else:
+                                        func_name = 'unnamed'
+                            else:
+                                # For other languages (Python, JavaScript, Java, Go, Ruby, C#), use 'name'
+                                name_node = node.child_by_field_name('name')
+                                if name_node:
+                                    func_name = name_node.text.decode('utf-8')
+                                else:
+                                    func_name = 'unnamed'
+                            
+                            qualified_name = func_name
+                            # Check parent nodes for namespace or class/struct context
+                            parent = node.parent
+                            while parent:
+                                if parent.type == 'impl_item':
+                                    type_node = parent.child_by_field_name('type')
+                                    if type_node:
+                                        qualified_name = f"{type_node.text.decode('utf-8')}::{func_name}"
+                                        break
+                                elif parent.type in ['class_declaration', 'struct_item']:
+                                    parent_name_node = parent.child_by_field_name('name')
+                                    if parent_name_node:
+                                        qualified_name = f"{parent_name_node.text.decode('utf-8')}::{func_name}"
+                                        break
+                                parent = parent.parent
+                            
+                            # Determine parameter count from the parameters node if available
+                            param_count = 0
                             params_node = node.child_by_field_name('parameters')
-                            if name_node:
-                                func_name = name_node.text.decode('utf-8')
-                                qualified_name = func_name
-                                # Check for namespace (Rust impl, C++ class, etc.)
-                                parent = node.parent
-                                while parent:
-                                    if parent.type == 'impl_item':
-                                        type_node = parent.child_by_field_name('type')
-                                        if type_node:
-                                            qualified_name = f"{type_node.text.decode('utf-8')}::{func_name}"
-                                            break
-                                    elif parent.type in ['class_declaration', 'struct_item']:
-                                        name_node = parent.child_by_field_name('name')
-                                        if name_node:
-                                            qualified_name = f"{name_node.text.decode('utf-8')}::{func_name}"
-                                            break
-                                    parent = parent.parent
-                                param_count = 0
-                                if params_node:
-                                    param_types = ['identifier', 'parameter', 'formal_parameter', 'simple_parameter']
-                                    param_count = sum(1 for child in params_node.children if child.type in param_types)
-                                function_map[(file_path, qualified_name, param_count)] = node
-                                # print(f"Mapped: {(file_path, qualified_name, param_count)}")
+                            if params_node:
+                                param_types = ['identifier', 'parameter', 'formal_parameter', 'simple_parameter']
+                                param_count = sum(1 for child in params_node.children if child.type in param_types)
+                            
+                            # Map the function by a tuple key (file_path, qualified_name, param_count)
+                            function_map[(file_path, qualified_name, param_count)] = node
+                            # print(f"Mapped: {(file_path, qualified_name, param_count)}")
     return ast_map, function_map
+
 
 
 
@@ -190,12 +216,25 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
                 'function_definition', 'method_definition', 'function_declaration', 
                 'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
             ]:
+                # Try to get the function name directly
                 name_node = node.child_by_field_name('name')
+                if not name_node:
+                    # Fallback: check for a declarator and then find an identifier within it
+                    declarator = node.child_by_field_name('declarator')
+                    if declarator:
+                        for child in declarator.children:
+                            if child.type == 'identifier':
+                                name_node = child
+                                break
                 if name_node:
                     result["function_name"] = name_node.text.decode('utf-8')
+                else:
+                    result["function_name"] = "unnamed"
+                
                 params = node.child_by_field_name('parameters')
                 if params:
                     result["param_count"] = sum(1 for c in params.children if c.type in ['parameter', 'identifier'])
+                
                 body_field_names = ['body', 'block', 'value', 'statement']
                 block_node = next((node.child_by_field_name(f) for f in body_field_names if node.child_by_field_name(f)), None)
                 if not block_node:
@@ -203,28 +242,27 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
                         if child.type in ['block', 'compound_statement', 'block_statement']:
                             block_node = child
                             break
-                # Reclassify string nodes as documentation_comment if they are the first child (likely a docstring)
-                if "children" in result and result["children"] and result["children"][0]["type"] == "string":
-                    result["children"][0]["type"] = "documentation_comment"
                 if block_node:
                     result["children"] = [
                         node_to_dict(child, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
                         for child in block_node.children if child.is_named
                     ]
-                    # Check for docstring as the first child and reclassify it with its own source info
-                    if "children" in result and result["children"] and result["children"][0]["type"] == "string":
-                        docstring_node = result["children"][0]
-                        docstring_node["type"] = "documentation_comment"
-                        # Use the docstring's actual start point if available, otherwise offset from function start
-                        first_child = block_node.children[0] if block_node.children else None
-                        docstring_line = first_child.start_point[0] + 1 if first_child and first_child.is_named else result["source"]["line"] + 1
-                        docstring_node["source"] = {"file": file_path or "unknown", "line": docstring_line}
+                    # Safely check for a docstring as the first child
+                    if result.get("children") and len(result["children"]) > 0:
+                        if result["children"][0].get("type") == "string":
+                            result["children"][0]["type"] = "documentation_comment"
+                            first_child = block_node.children[0] if block_node.children else None
+                            docstring_line = first_child.start_point[0] + 1 if first_child and first_child.is_named else result["source"]["line"] + 1
+                            result["children"][0]["source"] = {"file": file_path or "unknown", "line": docstring_line}
+
             # Handle imports for module tracking (moved from use_declaration)
             elif node.type in ['import_statement', 'import_from_statement']:
                 module_node = node.child_by_field_name('module_name') or node.child_by_field_name('name')
                 if module_node and module_node.type == 'dotted_name':
                     module_name = module_node.text.decode('utf-8')
+                    print(module_name)
                     modules_used.add(module_name)
+
         
         # Process children for non-leaf structural nodes
         if "children" not in result and "arguments" not in result:
@@ -267,6 +305,7 @@ def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     for file_path in referenced_files:
         root_node = ast_map[file_path]
         extract_imports(root_node, modules_used)
+        
     
     # Build the result dictionary
     ast_map_dict = {
@@ -287,7 +326,11 @@ def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     output_path = output_file or "/app/backend/sample_project/ast_output.json"
     # print(ast_map_dict)
     save_ast_to_file(ast_map_dict, output_path)
-    print(extract_ast_details(ast_map_dict,entrypoint_file))
+    # print(f"\n\n{ast_map_dict}\n")
+    # print(extract_ast_details(ast_map_dict,entrypoint_file))
+    writeTojson=extract_ast_details(ast_map_dict,entrypoint_file)
+    with open('/app/backend/sample_project/extracted.json','w') as f:
+        json.dump(writeTojson,f)
     return ast_map_dict  # Return for further use or testing
 
 def extract_ast_details(ast, file_path):
@@ -323,7 +366,7 @@ def extract_ast_details(ast, file_path):
     # Common node types across languages (Tree-sitter compatible)
     function_types = {
         'function_definition', 'function_item', 'method_definition', 'function_declaration',
-        'def_statement', 'lambda', 'async_function'
+        'def_statement', 'lambda', 'async_function','arrow_function','function_item', 'constructor_declaration'
     }
     module_types = {
         'use_declaration', 'import_statement', 'mod_item', 'import_from_statement',
@@ -355,6 +398,7 @@ def extract_ast_details(ast, file_path):
             current_source (dict): Source info from the nearest ancestor with 'source'.
             current_function_id (str): ID of the enclosing function.
         """
+        # print(node)
         # Update current_source if node has source info
         if 'source' in node:
             current_source = node['source']
@@ -366,7 +410,7 @@ def extract_ast_details(ast, file_path):
         )
 
         # **Comments**
-        if node['type'] in comment_types:
+        if node.get('type') in comment_types:
             line = node.start_point[0] + 1 if 'start_point' in node else 0
             text = node.get('Text', '')
             comments.append({
@@ -378,10 +422,21 @@ def extract_ast_details(ast, file_path):
             })
             tooltips[node_id] = f"Comment: {text}\nLine: {line}"
             return
-
+        # print(node)   
         # **Functions**
-        if node['type'] in function_types:
-            func_name = node.get('function_name', 'unnamed')
+        if node.get('type') in function_types:
+            # Try to get the function name from the node first
+            func_name = node.get('function_name')
+            # If it's still None or empty, iterate over children to find an identifier
+            if not func_name:
+                for child in node.get('children', []):
+                    # print(child)
+                    if child.get('type') == 'identifier' and 'Text' in child:
+                        func_name = child.get('Text')
+                        break
+            if not func_name:
+                func_name = 'unnamed'
+            print(func_name)
             line = current_source.get('line', 0) if current_source else 0
             # Extract parameters (fallback to param_count or children)
             params = []
@@ -400,8 +455,13 @@ def extract_ast_details(ast, file_path):
                 'line': line,
                 'parameters': params,
                 'depth': depth,
-                'calls': []  # Populated later via dataflow
+                'calls': [],  # Populated later via dataflow
+                'expanded': False,  # flag for interactivity (collapsed by default)
+                'nodeType': 'function',  # indicates this is a function node
+                'x': 0, 'y': 0, 'z': 0  
             })
+
+
             tooltips[node_id] = (
                 f"Function: {func_name}\n"
                 f"Parameters: {', '.join(params) if params else 'None'}\n"
@@ -411,7 +471,7 @@ def extract_ast_details(ast, file_path):
             current_function_id = node_id
 
         # **Variables and Assignments**
-        if node['type'] in assignment_types:
+        if node.get('type') in assignment_types:
             var_name = None
             var_id = None
             value = None
@@ -465,7 +525,8 @@ def extract_ast_details(ast, file_path):
                     tooltips[var_id] += f"\nAssigned from: {value['name']}"
 
         # **Function Calls**
-        if node['type'] in call_types and current_function_id:
+                # **Function Calls**
+        if node.get('type') in call_types and current_function_id:
             called_func = node.get('function_call', 'unknown_call')
             line = current_source.get('line', 0) if current_source else 0
             call_id = f"call_{called_func}@{line}_{id(node)}"
@@ -476,15 +537,49 @@ def extract_ast_details(ast, file_path):
                 'line': line
             })
             # Add to function's calls list (if function exists)
+            # Add to function's calls list (if function exists)
             for func in functions:
                 if func['id'] == current_function_id:
                     func['calls'].append(called_func)
-            func_name = next((func['name'] for func in functions if func['id'] == current_function_id), 'unknown')
+                    # NEW: Ensure the function node has a 'children' list for call nodes
+                    if 'children' not in func:
+                        func['children'] = []
+                    # Check if a call node for this target and line already exists for grouping
+                    existing_call = next((child for child in func['children']
+                                        if child.get('target') == called_func and child.get('line') == line), None)
+                    if existing_call:
+                        # Increment a count property for aggregated calls
+                        existing_call['count'] = existing_call.get('count', 1) + 1
+                        # Optionally, you can update the tooltip to reflect the count
+                        existing_call['tooltip'] = (
+                            f"Call to: {called_func} (x{existing_call['count']})\n"
+                            f"From Function: {func['name']} ({current_function_id})\n"
+                            f"Line: {line}"
+                        )
+                    else:
+                        # Otherwise, create a new call node with count = 1 and add layout hints
+                        func['children'].append({
+                            'id': call_id,
+                            'target': called_func,  # Will be resolved to function ID later
+                            'line': line,
+                            'tooltip': (
+                                f"Call to: {called_func}\n"
+                                f"From Function: {func['name']} ({current_function_id})\n"
+                                f"Line: {line}"
+                            ),
+                            'nodeType': 'call',    # marks this as a call node
+                            'expanded': False,     # for potential future nested details
+                            'x': 0, 'y': 0, 'z': 0,  # optional initial layout coordinates
+                            'count': 1             # new property to track multiple calls
+                        })
+
+
             tooltips[call_id] = (
                 f"Call to: {called_func}\n"
-                f"From Function: {func_name} ({current_function_id})\n"
+                f"From Function: {next((func['name'] for func in functions if func['id'] == current_function_id), 'unknown')} ({current_function_id})\n"
                 f"Line: {line}"
             )
+
 
         # **Vulnerabilities**
         if 'vulnerabilities' in node:
@@ -501,19 +596,20 @@ def extract_ast_details(ast, file_path):
                 })
                 tooltips[vuln_id] = f"Vulnerability: {vuln}\nLine: {line}"
                 # Attach to associated node
-                if node['type'] in function_types:
+                if node.get('type') in function_types:
                     for func in functions:
                         if func['id'] == node_id:
                             func.setdefault('vulnerabilities', []).append(vuln)
-                elif var_id:
-                    for var in variables:
-                        if var['id'] == var_id:
-                            var.setdefault('vulnerabilities', []).append(vuln)
+                # elif var_id:
+                #     for var in variables:
+                #         if var['id'] == var_id:
+                #             var.setdefault('vulnerabilities', []).append(vuln)
 
         # Recurse through children
         for child in node.get('children', []):
             traverse(child, node_id, depth + 1, current_source, current_function_id)
-
+        if 'called_function' in node:
+            traverse(node['called_function'], node_id, depth + 1, current_source, current_function_id)
     # Start traversal
     
     traverse(ast['main_ast'], file_path)
@@ -538,9 +634,10 @@ def extract_ast_details(ast, file_path):
         "referenced_files": ast.get('referenced_files', [])
     }
 
+
+
 def save_ast_to_file(ast_map, filename):
     """Save the AST dictionary to a JSON file."""
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(ast_map, f, indent=4)
     print(f"✅ ASTs saved to {filename}")
-

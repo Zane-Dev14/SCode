@@ -189,6 +189,14 @@ class CodeAnalyzer {
                             vscode.window.showErrorMessage(`Failed to open file: ${error.message}`);
                         }
                         break;
+                        case 'error':
+                            const errorMsg = message.message || 'Unknown error';
+                            this.outputChannel.appendLine(`Webview error: ${errorMsg}`);
+                            if (message.stack) {
+                                this.outputChannel.appendLine(`Stack: ${message.stack}`);
+                            }
+                            vscode.window.showErrorMessage(`Webview error: ${errorMsg}`);
+                            break;
                 }
             },
             undefined,
@@ -210,11 +218,10 @@ class CodeAnalyzer {
         const mainJsUri = this.panel.webview.asWebviewUri(
             vscode.Uri.file(path.join(this.extensionPath, 'media', 'main.js'))
         );
-        
         const mainCssUri = this.panel.webview.asWebviewUri(
             vscode.Uri.file(path.join(this.extensionPath, 'media', 'main.css'))
         );
-
+    
         return `<!DOCTYPE html>
         <html lang="en">
         <head>
@@ -223,12 +230,12 @@ class CodeAnalyzer {
             <title>Code Analysis</title>
             <link rel="stylesheet" href="${mainCssUri}">
             <script>
-                // Safe way to get vscode API
-                const vscode = acquireVsCodeApi();
+                // Attach vscode to window to avoid redeclaration conflicts
+                window.vscode = acquireVsCodeApi();
                 
                 // Log errors to help with debugging
                 window.onerror = function(message, source, lineno, colno, error) {
-                    vscode.postMessage({
+                    window.vscode.postMessage({
                         command: 'error',
                         message: message,
                         source: source,

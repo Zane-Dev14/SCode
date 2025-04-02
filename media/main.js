@@ -1,7 +1,5 @@
 // main.js
 // Get the VS Code API
-const vscode = acquireVsCodeApi();
-
 // State
 let astData = null;
 let currentView = 'loading';
@@ -208,7 +206,7 @@ function showEntrypointSelector(files, projectDir) {
       fileItem.classList.add('selected');
       
       // Send message to extension
-      vscode.postMessage({
+      window.postMessage({
         command: 'selectEntrypoint',
         projectDir: projectDir,
         entrypoint: file.path

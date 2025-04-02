@@ -91,52 +91,68 @@ class PythonManager {
             process.platform === 'win32' ? 'Scripts' : 'bin',
             process.platform === 'win32' ? 'python.exe' : 'python'
         );
-
+    
         if (this.pythonProcess) {
             this.pythonProcess.kill();
         }
-
+    
         return new Promise((resolve, reject) => {
-            // Using a shorter timeout
             const timeout = setTimeout(() => {
-                reject(new Error('Timeout waiting for Python server to start'));
-            }, 100000);
+                reject(new Error('Timeout waiting for Python server to start after 100 seconds'));
+            }, 100000); // 100 seconds
             
             try {
+                console.log(`Starting Python server with: ${pythonPath} api.py`);
+                console.log(`CWD: ${backendPath}`);
+                console.log(`Port: ${this.serverPort}`);
+    
                 this.pythonProcess = spawn(pythonPath, ['api.py'], {
                     cwd: backendPath,
                     env: { ...process.env, PORT: this.serverPort.toString() }
                 });
-
+    
                 this.pythonProcess.stdout.on('data', (data) => {
-                    console.log(`Python: ${data}`);
-                    if (data.toString().includes('Running on')) {
+                    const output = data.toString();
+                    console.log(`Python stdout: ${output}`);
+                    if (output.includes('Running on')) {
                         clearTimeout(timeout);
                         resolve();
                     }
                 });
-
+    
                 this.pythonProcess.stderr.on('data', (data) => {
-                    console.error(`Python error: ${data}`);
+                    const errorOutput = data.toString();
+                    console.error(`Python stderr: ${errorOutput}`);
+                    // Optionally reject early on stderr if it indicates a fatal error
+                    if (errorOutput.includes('Error') || errorOutput.includes('Exception')) {
+                        clearTimeout(timeout);
+                        reject(new Error(`Python server error: ${errorOutput}`));
+                    }
                 });
-
+    
                 this.pythonProcess.on('error', (err) => {
                     clearTimeout(timeout);
+                    console.error(`Spawn error: ${err.message}`);
                     reject(err);
                 });
-
-                this.pythonProcess.on('exit', (code) => {
+    
+                this.pythonProcess.on('exit', (code, signal) => {
+                    clearTimeout(timeout);
                     if (code !== 0) {
-                        clearTimeout(timeout);
+                        console.error(`Python process exited with code ${code}, signal ${signal}`);
                         reject(new Error(`Python server exited with code ${code}`));
+                    } else {
+                        console.log('Python process exited normally');
                     }
                 });
             } catch (error) {
                 clearTimeout(timeout);
+                console.error(`Try-catch error: ${error.message}`);
                 reject(error);
             }
         });
     }
+    
 
     stopPythonServer() {
         if (this.pythonProcess) {

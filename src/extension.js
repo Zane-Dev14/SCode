@@ -1,13 +1,13 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
-import { spawn } from 'child_process';
-import { VisualizationPanel } from './visualizationPanel';
+const vscode = require('vscode');
+const path = require('path');
+const fs = require('fs');
+const { spawn } = require('child_process');
+const { VisualizationPanel } = require('./visualizationPanel');
 
-let pythonProcess: any = null;
+let pythonProcess = null;
 let serverPort = 5000;
 
-export function activate(context: vscode.ExtensionContext) {
+function activate(context) {
     console.log('SCode Analyzer extension is now active!');
 
     let analyzeCommand = vscode.commands.registerCommand('scode.analyzeWorkspace', async () => {
@@ -52,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(analyzeCommand);
 }
 
-async function startPythonBackend(extensionPath: string): Promise<void> {
+async function startPythonBackend(extensionPath) {
     // Check if Python is installed
     const pythonPath = await getPythonPath();
     const backendPath = path.join(extensionPath, 'backend');
@@ -83,11 +83,11 @@ async function startPythonBackend(extensionPath: string): Promise<void> {
     });
 
     // Log output for debugging
-    pythonProcess.stdout.on('data', (data: Buffer) => {
+    pythonProcess.stdout.on('data', (data) => {
         console.log(`Python backend: ${data}`);
     });
 
-    pythonProcess.stderr.on('data', (data: Buffer) => {
+    pythonProcess.stderr.on('data', (data) => {
         console.error(`Python backend error: ${data}`);
     });
 
@@ -97,7 +97,7 @@ async function startPythonBackend(extensionPath: string): Promise<void> {
             reject(new Error("Timeout waiting for Python backend to start"));
         }, 10000);
 
-        pythonProcess.stdout.on('data', (data: Buffer) => {
+        pythonProcess.stdout.on('data', (data) => {
             if (data.toString().includes('Running on')) {
                 clearTimeout(timeout);
                 resolve(undefined);
@@ -106,7 +106,7 @@ async function startPythonBackend(extensionPath: string): Promise<void> {
     });
 }
 
-async function createVirtualEnvironment(pythonPath: string, backendPath: string): Promise<void> {
+async function createVirtualEnvironment(pythonPath, backendPath) {
     return new Promise((resolve, reject) => {
         const process = spawn(pythonPath, ['-m', 'venv', '.venv'], { cwd: backendPath });
         
@@ -120,7 +120,7 @@ async function createVirtualEnvironment(pythonPath: string, backendPath: string)
     });
 }
 
-async function installRequirements(pythonPath: string, backendPath: string): Promise<void> {
+async function installRequirements(pythonPath, backendPath) {
     return new Promise((resolve, reject) => {
         const process = spawn(pythonPath, ['-m', 'pip', 'install', '-r', 'requirements.txt'], {
             cwd: backendPath
@@ -136,7 +136,7 @@ async function installRequirements(pythonPath: string, backendPath: string): Pro
     });
 }
 
-async function getPythonPath(): Promise<string> {
+async function getPythonPath() {
     // Try to get Python path from VSCode Python extension settings
     const pythonConfig = vscode.workspace.getConfiguration('python');
     let pythonPath = pythonConfig.get('defaultInterpreterPath');
@@ -156,7 +156,7 @@ function stopPythonBackend() {
     }
 }
 
-async function runAnalysis(workspacePath: string): Promise<any> {
+async function runAnalysis(workspacePath) {
     const apiUrl = `http://localhost:${serverPort}/analyze`;
     const response = await fetch(apiUrl, {
         method: 'POST',
@@ -171,6 +171,11 @@ async function runAnalysis(workspacePath: string): Promise<any> {
     return response.json();
 }
 
-export function deactivate() {
+function deactivate() {
     stopPythonBackend();
 }
+
+module.exports = {
+    activate,
+    deactivate
+};

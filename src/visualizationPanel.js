@@ -1,14 +1,38 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
+const vscode = require('vscode');
+const path = require('path');
+const fs = require('fs');
 
-export class VisualizationPanel {
-    public static currentPanel: VisualizationPanel | undefined;
-    private readonly _panel: vscode.WebviewPanel;
-    private readonly _extensionUri: vscode.Uri;
-    private _disposables: vscode.Disposable[] = [];
+class VisualizationPanel {
+    static currentPanel = undefined;
+    constructor(panel, extensionUri) {
+        this._panel = panel;
+        this._extensionUri = extensionUri;
+        this._disposables = [];
 
-    public static createOrShow(extensionUri: vscode.Uri, analysisResult: any) {
+        // Set the webview's initial html content
+        this._update({ status: 'loading' });
+
+        // Listen for when the panel is disposed
+        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // Handle messages from the webview
+        this._panel.webview.onDidReceiveMessage(
+            message => {
+                switch (message.command) {
+                    case 'alert':
+                        vscode.window.showErrorMessage(message.text);
+                        return;
+                    case 'openFile':
+                        this._openFile(message.file, message.line);
+                        return;
+                }
+            },
+            null,
+            this._disposables
+        );
+    }
+
+    static createOrShow(extensionUri, analysisResult) {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
@@ -37,34 +61,7 @@ export class VisualizationPanel {
         VisualizationPanel.currentPanel._update(analysisResult);
     }
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-        this._panel = panel;
-        this._extensionUri = extensionUri;
-
-        // Set the webview's initial html content
-        this._update({ status: 'loading' });
-
-        // Listen for when the panel is disposed
-        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-
-        // Handle messages from the webview
-        this._panel.webview.onDidReceiveMessage(
-            message => {
-                switch (message.command) {
-                    case 'alert':
-                        vscode.window.showErrorMessage(message.text);
-                        return;
-                    case 'openFile':
-                        this._openFile(message.file, message.line);
-                        return;
-                }
-            },
-            null,
-            this._disposables
-        );
-    }
-
-    private _openFile(filePath: string, line: number) {
+    _openFile(filePath, line) {
         vscode.workspace.openTextDocument(filePath).then(document => {
             vscode.window.showTextDocument(document).then(editor => {
                 const range = new vscode.Range(line, 0, line, 0);
@@ -74,12 +71,9 @@ export class VisualizationPanel {
         });
     }
 
-    public dispose() {
+    dispose() {
         VisualizationPanel.currentPanel = undefined;
-
-        // Clean up our resources
         this._panel.dispose();
-
         while (this._disposables.length) {
             const x = this._disposables.pop();
             if (x) {
@@ -88,13 +82,13 @@ export class VisualizationPanel {
         }
     }
 
-    private _update(analysisResult: any) {
+    _update(analysisResult) {
         const webview = this._panel.webview;
         this._panel.title = 'SCode Analyzer Visualization';
         this._panel.webview.html = this._getHtmlForWebview(webview, analysisResult);
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview, analysisResult: any) {
+    _getHtmlForWebview(webview, analysisResult) {
         // Local path to main script run in the webview
         const scriptPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js');
         const scriptUri = webview.asWebviewUri(scriptPathOnDisk);
@@ -125,60 +119,58 @@ export class VisualizationPanel {
             <link href="${styleUri}" rel="stylesheet">
             <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
             <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.0.0/d3.min.js"></script>
+            <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+            <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+            <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+            <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/react-three-fiber/8.15.11/react-three-fiber.min.js"></script>
+            <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/@react-three/drei/9.88.0/drei.min.js"></script>
+            <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/@react-three/postprocessing/2.15.11/effect.min.js"></script>
+            <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/framer-motion/10.16.4/framer-motion.min.js"></script>
         </head>
         <body>
-            <div class="container">
-                <h1>SCode Analyzer Results</h1>
-                
-                <div class="stats">
-                    <div class="stat-item">
-                        <span class="stat-label">Files Analyzed:</span>
-                        <span class="stat-value">${analysisResult.files_analyzed || 0}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Vulnerabilities Found:</span>
-                        <span class="stat-value">${analysisResult.vulnerabilities?.length || 0}</span>
+            <div id="root">
+                <div class="loading-screen">
+                    <div class="loading-content">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Initializing Visualization...</div>
                     </div>
                 </div>
-
-                <div class="tabs">
-                    <button class="tab-button active" data-tab="visualization">3D Visualization</button>
-                    <button class="tab-button" data-tab="vulnerabilities">Vulnerabilities</button>
-                </div>
-
-                <div class="tab-content active" id="visualization">
-                    <div id="3d-container"></div>
-                </div>
-
-                <div class="tab-content" id="vulnerabilities">
-                    <table class="vulnerabilities-table">
-                        <thead>
-                            <tr>
-                                <th>File</th>
-                                <th>Vulnerability</th>
-                                <th>Description</th>
-                                <th>Severity</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${analysisResult.vulnerabilities?.map(vuln => `
-                                <tr class="vulnerability-row severity-${vuln.severity}">
-                                    <td class="file-cell">
-                                        <a href="#" class="file-link" data-file="${vuln.file}">${path.basename(vuln.file)}</a>
-                                    </td>
-                                    <td>${vuln.vulnerability}</td>
-                                    <td>${vuln.description}</td>
-                                    <td>${vuln.severity}</td>
-                                </tr>
-                            `).join('') || '<tr><td colspan="4">No vulnerabilities found</td></tr>'}
-                        </tbody>
-                    </table>
+                <div class="main-container">
+                    <div class="sidebar">
+                        <div class="sidebar-header">
+                            <h2>SCode Analyzer</h2>
+                        </div>
+                        <div class="sidebar-content">
+                            <div class="view-selector">
+                                <button class="view-button active" data-view="ast">AST Visualization</button>
+                                <button class="view-button" data-view="modules">Modules</button>
+                                <button class="view-button" data-view="vulnerabilities">Vulnerabilities</button>
+                            </div>
+                            <div class="stats-panel">
+                                <div class="stat-item">
+                                    <span class="stat-label">Functions</span>
+                                    <span class="stat-value">${analysisResult.functions?.length || 0}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Modules</span>
+                                    <span class="stat-value">${analysisResult.modules?.length || 0}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Vulnerabilities</span>
+                                    <span class="stat-value">${analysisResult.vulnerabilities?.length || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="visualization-container">
+                        <div id="canvas-container"></div>
+                    </div>
                 </div>
             </div>
 
             <script nonce="${nonce}">
                 const vscode = acquireVsCodeApi();
-                const vulnerabilitiesData = ${JSON.stringify(analysisResult.vulnerabilities || [])};
+                const analysisData = ${JSON.stringify(analysisResult)};
                 const astData = ${astData ? JSON.stringify(astData) : 'null'};
             </script>
             <script nonce="${nonce}" src="${scriptUri}"></script>
@@ -195,3 +187,7 @@ function getNonce() {
     }
     return text;
 }
+
+module.exports = {
+    VisualizationPanel
+};

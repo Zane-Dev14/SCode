@@ -1,97 +1,306 @@
-/* main.css */
-body {
+/* Modern CSS Reset */
+* {
     margin: 0;
     padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f3f3f3;
+    box-sizing: border-box;
 }
 
-.container {
-    padding: 20px;
-    max-width: 100%;
-}
-
-h1 {
-    color: #333;
-    margin-bottom: 20px;
-}
-
-.stats {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    max-width: 400px;
-}
-
-.stat-item {
-    background-color: #fff;
-    padding: 10px 15px;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    flex: 1;
-    margin-right: 10px;
-}
-
-.stat-item:last-child {
-    margin-right: 0;
-}
-
-.stat-label {
-    font-size: 14px;
-    color: #666;
-    display: block;
-    margin-bottom: 5px;
-}
-
-.stat-value {
-    font-size: 20px;
-    font-weight: bold;
-    color: #333;
-}
-
-.tabs {
-    display: flex;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #ddd;
-}
-
-.tab-button {
-    padding: 10px 20px;
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 16px;
-    color: #666;
-    outline: none;
-}
-
-.tab-button.active {
-    color: #0078d7;
-    border-bottom: 2px solid #0078d7;
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-#3d-container {
-    width: 100%;
-    height: 600px;
-    background-color: #f0f0f0;
-    border-radius: 5px;
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background: #1a1a1a;
+    color: #ffffff;
     overflow: hidden;
 }
 
-.vulnerabilities-table {
+/* Loading Screen */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    background-color: #fff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: 100%;
+    background: #1a1a1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
 }
 
-.vulnerabilities-table th,
+.loading-content {
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid #333;
+    border-top-color: #00ff00;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+.loading-text {
+    font-size: 18px;
+    color: #00ff00;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Main Container */
+.app-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 300px;
+    background: #2a2a2a;
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.sidebar-header {
+    margin-bottom: 30px;
+}
+
+.sidebar-header h2 {
+    color: #00ff00;
+    font-size: 24px;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.view-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.view-button {
+    padding: 12px 20px;
+    background: #333;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.view-button:hover {
+    background: #444;
+    transform: translateX(5px);
+}
+
+.view-button.active {
+    background: #00ff00;
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+}
+
+/* Stats Panel */
+.stats-panel {
+    background: #333;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    background: #444;
+    transform: translateX(5px);
+}
+
+.stat-label {
+    color: #888;
+    font-size: 14px;
+}
+
+.stat-value {
+    color: #00ff00;
+    font-size: 18px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+/* Visualization Container */
+.visualization-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+#canvas-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* Vulnerability Cards */
+.vulnerability-list {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    overflow-y: auto;
+    height: 100%;
+}
+
+.vulnerability-card {
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    border-left: 4px solid #ff4444;
+}
+
+.vulnerability-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.vulnerability-card.high {
+    border-left-color: #ff4444;
+}
+
+.vulnerability-card.medium {
+    border-left-color: #ffbb33;
+}
+
+.vulnerability-card.low {
+    border-left-color: #00C851;
+}
+
+.vulnerability-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.vulnerability-header h3 {
+    color: #fff;
+    font-size: 18px;
+}
+
+.severity-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.vulnerability-card.high .severity-badge {
+    background: #ff4444;
+    color: #fff;
+}
+
+.vulnerability-card.medium .severity-badge {
+    background: #ffbb33;
+    color: #000;
+}
+
+.vulnerability-card.low .severity-badge {
+    background: #00C851;
+    color: #fff;
+}
+
+.vulnerability-content {
+    color: #888;
+}
+
+.file-info {
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #666;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.vulnerability-card {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 250px;
+    }
+
+    .vulnerability-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+    }
+
+    .visualization-container {
+        height: calc(100vh - 200px);
+    }
+}

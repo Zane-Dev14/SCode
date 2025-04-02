@@ -1,288 +1,368 @@
 /* Modern CSS Reset */
-* {
-    margin: 0;
-    padding: 0;
+*, *::before, *::after {
     box-sizing: border-box;
 }
 
-body {
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    background: #1a1a1a;
-    color: #ffffff;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #e1e1e1;
+    background-color: #1e1e1e;
     overflow: hidden;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+}
+
+.hidden {
+    display: none !important;
 }
 
 /* Loading Screen */
 .loading-screen {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: #1a1a1a;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+    z-index: 100;
+    transition: opacity 0.5s ease;
 }
 
-.loading-content {
-    text-align: center;
-}
-
-.loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 3px solid #333;
-    border-top-color: #00ff00;
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(255, 255, 255, 0.1);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 20px;
-}
-
-.loading-text {
-    font-size: 18px;
-    color: #00ff00;
-    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    border-top-color: #00ffff;
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 20px;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
-/* Main Container */
+.loading-screen h2 {
+    font-size: 24px;
+    margin: 20px 0 10px;
+    color: #00ffff;
+    text-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+    animation: pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+    from { text-shadow: 0 0 10px rgba(0, 255, 255, 0.7); }
+    to { text-shadow: 0 0 20px rgba(0, 255, 255, 1); }
+}
+
+.loading-screen p {
+    font-size: 16px;
+    margin: 5px 0;
+    color: #bbbbbb;
+}
+
+/* Main Application Container */
 .app-container {
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
 }
 
-.main-container {
+.main-content {
     display: flex;
-    flex: 1;
-    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.5s ease;
 }
 
 /* Sidebar */
 .sidebar {
-    width: 300px;
-    background: #2a2a2a;
-    border-right: 1px solid #333;
+    width: 250px;
+    height: 100%;
+    background-color: #252526;
+    border-right: 1px solid #333333;
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 20px 0;
+    overflow-y: auto;
 }
 
 .sidebar-header {
-    margin-bottom: 30px;
+    padding: 0 20px 20px;
+    border-bottom: 1px solid #333333;
 }
 
 .sidebar-header h2 {
-    color: #00ff00;
-    font-size: 24px;
-    text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    margin: 0;
+    font-size: 20px;
+    color: #00ffff;
 }
 
-.view-selector {
+.sidebar-menu {
+    padding: 20px 0;
+    flex-grow: 1;
+}
+
+.menu-item {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 30px;
-}
-
-.view-button {
-    padding: 12px 20px;
-    background: #333;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 16px;
+    align-items: center;
+    padding: 10px 20px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    color: #bbbbbb;
+    background: none;
+    border: none;
+    font-size: 14px;
+    text-align: left;
+    width: 100%;
+    transition: all 0.2s ease;
 }
 
-.view-button:hover {
-    background: #444;
-    transform: translateX(5px);
+.menu-item:hover {
+    background-color: #2a2d2e;
+    color: #ffffff;
 }
 
-.view-button.active {
-    background: #00ff00;
-    color: #000;
-    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+.menu-item.active {
+    background-color: #37373d;
+    color: #00ffff;
+    border-left: 3px solid #00ffff;
 }
 
-/* Stats Panel */
-.stats-panel {
-    background: #333;
-    border-radius: 8px;
+.menu-item .icon {
+    margin-right: 10px;
+    font-size: 18px;
+}
+
+.sidebar-stats {
     padding: 20px;
+    border-top: 1px solid #333333;
 }
 
 .stat-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding: 10px;
-    background: #2a2a2a;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-}
-
-.stat-item:hover {
-    background: #444;
-    transform: translateX(5px);
+    margin-bottom: 10px;
 }
 
 .stat-label {
-    color: #888;
-    font-size: 14px;
+    color: #bbbbbb;
 }
 
 .stat-value {
-    color: #00ff00;
-    font-size: 18px;
+    color: #00ffff;
     font-weight: bold;
-    text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
 }
 
 /* Visualization Container */
 .visualization-container {
-    flex: 1;
+    flex-grow: 1;
+    height: 100%;
     position: relative;
+    background-color: #1e1e1e;
     overflow: hidden;
 }
 
-#canvas-container {
+.view-container {
     width: 100%;
     height: 100%;
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: opacity 0.3s ease;
 }
 
-/* Vulnerability Cards */
-.vulnerability-list {
-    padding: 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    overflow-y: auto;
+/* AST View */
+.ast-view {
+    background-color: #1a1a1a;
+}
+
+.ast-view canvas {
+    display: block;
+}
+
+/* Modules View */
+.modules-view {
+    background-color: #1a1a1a;
+}
+
+.d3-container {
+    width: 100%;
     height: 100%;
 }
 
-.vulnerability-card {
-    background: #2a2a2a;
-    border-radius: 8px;
+/* Vulnerability View */
+.vulnerabilities-view {
+    background-color: #1a1a1a;
     padding: 20px;
-    transition: all 0.3s ease;
-    border-left: 4px solid #ff4444;
-}
-
-.vulnerability-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-.vulnerability-card.high {
-    border-left-color: #ff4444;
-}
-
-.vulnerability-card.medium {
-    border-left-color: #ffbb33;
-}
-
-.vulnerability-card.low {
-    border-left-color: #00C851;
+    overflow-y: auto;
 }
 
 .vulnerability-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
-.vulnerability-header h3 {
-    color: #fff;
-    font-size: 18px;
+.vulnerability-header h2 {
+    margin: 0 0 10px;
+    color: #00ffff;
+    font-size: 24px;
 }
 
-.severity-badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: bold;
-    text-transform: uppercase;
+.vulnerability-header p {
+    margin: 0;
+    color: #bbbbbb;
 }
 
-.vulnerability-card.high .severity-badge {
-    background: #ff4444;
-    color: #fff;
+.vulnerability-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
 }
 
-.vulnerability-card.medium .severity-badge {
-    background: #ffbb33;
-    color: #000;
+.vulnerability-card {
+    background-color: #252526;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    animation: fadeIn 0.5s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
 }
 
-.vulnerability-card.low .severity-badge {
-    background: #00C851;
-    color: #fff;
-}
-
-.vulnerability-content {
-    color: #888;
-}
-
-.file-info {
-    margin-top: 15px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #666;
-}
-
-/* Animations */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
-.vulnerability-card {
-    animation: fadeIn 0.5s ease forwards;
+.vulnerability-severity {
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    position: absolute;
+    top: 0;
+    right: 0;
+    border-bottom-left-radius: 5px;
 }
 
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-    width: 8px;
+.vulnerability-severity.critical {
+    background-color: #ff0044;
+    color: white;
 }
 
-::-webkit-scrollbar-track {
-    background: #1a1a1a;
+.vulnerability-severity.high {
+    background-color: #ff8800;
+    color: white;
 }
 
-::-webkit-scrollbar-thumb {
-    background: #333;
-    border-radius: 4px;
+.vulnerability-severity.medium {
+    background-color: #ffcc00;
+    color: #333;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: #444;
+.vulnerability-severity.low {
+    background-color: #00cc88;
+    color: white;
 }
 
-/* Responsive Design */
+.vulnerability-card.critical {
+    border-top: 3px solid #ff0044;
+}
+
+.vulnerability-card.high {
+    border-top: 3px solid #ff8800;
+}
+
+.vulnerability-card.medium {
+    border-top: 3px solid #ffcc00;
+}
+
+.vulnerability-card.low {
+    border-top: 3px solid #00cc88;
+}
+
+.vulnerability-content {
+    padding: 20px;
+}
+
+.vulnerability-content h3 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    color: white;
+}
+
+.vulnerability-content p {
+    margin: 0 0 15px;
+    font-size: 14px;
+    color: #bbbbbb;
+}
+
+.vulnerability-location {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #999999;
+}
+
+.view-code-btn {
+    background-color: #2d2d2d;
+    color: #00ffff;
+    border: 1px solid #00ffff;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-code-btn:hover {
+    background-color: #00ffff;
+    color: #1e1e1e;
+}
+
+/* Error Message */
+.error-message {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #ff3333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.error-message.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* Responsive Styles */
 @media (max-width: 768px) {
     .sidebar {
-        width: 250px;
+        width: 200px;
     }
 
     .vulnerability-list {
@@ -290,17 +370,129 @@ body {
     }
 }
 
-@media (max-width: 480px) {
-    .main-container {
-        flex-direction: column;
-    }
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
 
-    .sidebar {
-        width: 100%;
-        height: auto;
-    }
+::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
 
-    .visualization-container {
-        height: calc(100vh - 200px);
-    }
+::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+
+/* Add styles for entry point selector */
+.entrypoint-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(30, 30, 30, 0.9);
+    z-index: 10;
+}
+
+.entrypoint-dialog {
+    background-color: #252526;
+    border-radius: 8px;
+    width: 600px;
+    max-width: 90%;
+    max-height: 90%;
+    padding: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.entrypoint-dialog h2 {
+    margin: 0 0 15px 0;
+    color: #00ffff;
+    font-size: 22px;
+}
+
+.entrypoint-dialog p {
+    margin: 0 0 15px 0;
+    color: #bbbbbb;
+}
+
+.file-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 60vh;
+    border: 1px solid #333;
+    border-radius: 4px;
+}
+
+.file-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid #333;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    transition: background-color 0.2s ease;
+}
+
+.file-item:last-child {
+    border-bottom: none;
+}
+
+.file-item:hover {
+    background-color: #2a2a2a;
+}
+
+.file-item.selected {
+    background-color: #37373d;
+    border-left: 3px solid #00ffff;
+}
+
+.file-item.likely-entry {
+    background-color: rgba(0, 255, 255, 0.1);
+}
+
+.file-name {
+    font-weight: bold;
+    color: white;
+    margin-bottom: 4px;
+}
+
+.file-path {
+    font-size: 12px;
+    color: #999;
+}
+
+.likely-badge {
+    font-size: 10px;
+    background-color: #00ffff;
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 10px;
+    align-self: flex-start;
+    margin-top: 5px;
+}
+
+/* Placeholder message styling */
+.placeholder-message {
+    padding: 30px;
+    text-align: center;
+    max-width: 600px;
+    margin: 100px auto;
+    background-color: rgba(37, 37, 38, 0.7);
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.placeholder-message h2 {
+    color: #00ffff;
+    margin-bottom: 15px;
 }

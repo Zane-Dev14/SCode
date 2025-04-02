@@ -212,6 +212,48 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
                                 node_to_dict(c, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
                                 for c in args_children if c.type not in comment_types
                             ]
+            elif node.type in ['jsx_element', 'jsx_self_closing_element']:
+                result["type"] = node.type
+                # Find the tag name
+                if node.type == 'jsx_element':
+                    opening_element = next((child for child in node.children if child.type == 'jsx_opening_element'), None)
+                    tag_identifier = opening_element and next((child for child in opening_element.children if child.type == 'identifier'), None)
+                else:  # jsx_self_closing_element
+                    tag_identifier = next((child for child in node.children if child.type == 'identifier'), None)
+                
+                if tag_identifier:
+                    tag_name = tag_identifier.text.decode('utf-8')
+                    result["component"] = tag_name
+                    # Check if it's a user-defined component (capitalized)
+                    if tag_name[0].isupper():
+                        # Resolve component definition with flexible param_count
+                        for (file_path, name, param_count), def_node in function_map.items():
+                            if name == tag_name and param_count in [0, 1]:  # Allow 0 or 1 parameters
+                                func_key = (def_node.start_point, def_node.end_point)
+                                ref_key = f"{file_path}:{name}:{param_count}"
+                                visited_key = (file_path, name, param_count)
+                                if func_key in expanded_asts:
+                                    result["called_function"] = {"ref": ref_key}
+                                elif visited_key not in visited:
+                                    visited.add(visited_key)
+                                    expanded_ast = node_to_dict(def_node, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
+                                    expanded_ast["id"] = ref_key
+                                    expanded_asts[func_key] = expanded_ast
+                                    result["called_function"] = expanded_ast
+                                else:
+                                    result["called_function"] = {"ref": ref_key}
+                                # Add the file to referenced_files
+                                referenced_files.add(file_path)
+                                break
+                # Process all named children (attributes, child elements, etc.)
+                result["children"] = [
+                    node_to_dict(child, function_map, expanded_asts, modules_used, referenced_files, visited, file_path)
+                    for child in node.children if child.is_named
+                ]
+                # Remove empty children
+                result["children"] = [c for c in result["children"] if c]
+                if not result["children"]:
+                    del result["children"]
             elif node.type in [
                 'function_definition', 'method_definition', 'function_declaration', 
                 'method_declaration', 'function_item', 'constructor_declaration', 'arrow_function'
@@ -248,12 +290,13 @@ def node_to_dict(node, function_map, expanded_asts, modules_used, referenced_fil
                         for child in block_node.children if child.is_named
                     ]
                     # Safely check for a docstring as the first child
-                    if result.get("children") and len(result["children"]) > 0:
+                    if result.get("children") and len(result["children"]) > 0 and result["children"][0] is not None:
                         if result["children"][0].get("type") == "string":
                             result["children"][0]["type"] = "documentation_comment"
                             first_child = block_node.children[0] if block_node.children else None
                             docstring_line = first_child.start_point[0] + 1 if first_child and first_child.is_named else result["source"]["line"] + 1
                             result["children"][0]["source"] = {"file": file_path or "unknown", "line": docstring_line}
+
 
             # Handle imports for module tracking (moved from use_declaration)
             elif node.type in ['import_statement', 'import_from_statement']:

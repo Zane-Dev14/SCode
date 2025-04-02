@@ -32,11 +32,11 @@ def analyze():
         # Find a suitable entrypoint if not provided
         if not entrypoint:
             # First try to find common entry points
-            common_entrypoints = ['index.js', 'app.js', 'main.js', 'main.py', 'app.py']
+            common_entrypoints = ['index.js', 'app.js', 'main.js', 'main.py', 'app.py','main.rs']
             for entry in common_entrypoints:
                 potential_path = os.path.join(project_dir, entry)
                 if os.path.exists(potential_path):
-                    entrypoint = potential_path
+                    entrypoint = entry  # Use relative path instead of absolute
                     break
             
             # If still not found, find first suitable file
@@ -44,20 +44,21 @@ def analyze():
                 for root, _, files in os.walk(project_dir):
                     for file in files:
                         if file.endswith(('.js', '.ts', '.jsx', '.tsx', '.py')):
-                            entrypoint = os.path.join(root, file)
+                            entrypoint = os.path.relpath(os.path.join(root, file), project_dir)  # Store relative path
                             break
                     if entrypoint:
                         break
         
-        if not entrypoint or not os.path.exists(entrypoint):
+        if not entrypoint or not os.path.exists(os.path.join(project_dir, entrypoint)):
+            possible_entrypoints = find_possible_entrypoints(project_dir)
             return jsonify({
                 "status": "needs_entrypoint",
                 "message": "Please select an entry point file",
-                "options": find_possible_entrypoints(project_dir)
-            })
+                "options": possible_entrypoints
+            }), 200  # Use 200 status code for this case
             
         # Generate AST
-        result = generate_project_asts(project_dir, entrypoint)
+        result = generate_project_asts(project_dir, os.path.join(project_dir, entrypoint))
         
         # Save result to file
         output_dir = os.path.join(os.path.dirname(__file__), "output")
@@ -73,8 +74,12 @@ def analyze():
         })
     except Exception as e:
         app.logger.error(f"Error during analysis: {str(e)}", exc_info=True)
-        return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
-
+        # Make sure to return a properly formatted JSON response
+        return jsonify({
+            "status": "error",
+            "message": f"Analysis failed: {str(e)}",
+            "error": str(e)
+        }), 500
 @app.route('/ast', methods=['GET'])
 def get_ast():
     """Get the AST for the analyzed project"""

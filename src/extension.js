@@ -62,7 +62,7 @@ class CodeAnalyzer {
                     projectDir: workspaceFolder.uri.fsPath
                 });
             } catch (error) {
-                this.outputChannel.appendLine(`Error: ${error.message}`);
+                this.outputChannel.appendLine(`Errosr: ${error.message}`);
                 if (this.panel) {
                     this.panel.webview.postMessage({
                         command: 'error',

@@ -52,9 +52,9 @@
   "dependencies": {
     "d3": "^7.8.5",
     "gsap": "^3.12.2",
+    "node-fetch": "^2.7.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "three": "^0.152.2",
-    "node-fetch": "^2.6.9"
+    "three": "^0.152.2"
   }
 }

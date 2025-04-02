@@ -100,7 +100,7 @@ class PythonManager {
             // Using a shorter timeout
             const timeout = setTimeout(() => {
                 reject(new Error('Timeout waiting for Python server to start'));
-            }, 10000);
+            }, 100000);
             
             try {
                 this.pythonProcess = spawn(pythonPath, ['api.py'], {

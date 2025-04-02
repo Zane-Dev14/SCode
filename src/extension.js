@@ -1,6 +1,7 @@
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
+const fetch = require('node-fetch');
 const pythonManager = require('./pythonSetup');
 
 

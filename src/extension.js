@@ -18,21 +18,10 @@ async function activate(context) {
         vscode.window.showErrorMessage('Please open a file to analyze');
         return;
       }
-
-      const document = editor.document;
-      const text = document.getText();
-      const fileName = path.basename(document.fileName);
-
-      const analysis = await pythonManager.analyzeCode(text, fileName);
-      
-      if (analysis.error) {
-        vscode.window.showErrorMessage(`Analysis failed: ${analysis.error}`);
-        return;
-      }
-
-      showVisualization(analysis, context);
+      // Show Webview immediately, analysis will be triggered later by main.js
+      showVisualization(null, context);
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to analyze code: ${error.message}`);
+      vscode.window.showErrorMessage(`Failed to initialize analyzer: ${error.message}`);
     }
   });
 
@@ -40,45 +29,57 @@ async function activate(context) {
 }
 
 function showVisualization(analysis, context) {
-    // Create and show webview panel
-    const panel = vscode.window.createWebviewPanel(
+  const panel = vscode.window.createWebviewPanel(
     'scodeAnalyzer',
     'SCode Analyzer',
-      vscode.ViewColumn.One,
-      {
-        enableScripts: true,
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true,
       enableCommandUris: true,
-        retainContextWhenHidden: true,
+      retainContextWhenHidden: true,
       enableFindWidget: true,
       enableDevTools: true,
-        localResourceRoots: [
-          vscode.Uri.file(path.join(__dirname, '..', 'media'))
-        ]
-      }
-    );
+      localResourceRoots: [vscode.Uri.file(path.join(__dirname, '..', 'media'))],
+    }
+  );
 
-  // Get paths to resources
   const mediaRoot = vscode.Uri.file(path.join(__dirname, '..', 'media'));
   const bundleUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'dist', 'bundle.js'));
   const stylesUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'styles.css'));
 
-  // Set webview content
-  panel.webview.html = getWebviewContent(panel.webview, bundleUri, stylesUri);
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  const projectDir = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : 'No workspace folder';
 
-    // Handle messages from the webview
-    panel.webview.onDidReceiveMessage(
-      message => {
+  panel.webview.html = getWebviewContent(panel.webview, bundleUri, stylesUri, projectDir);
+
+  panel.webview.onDidReceiveMessage(
+    async (message) => {
       console.log('Received message from webview:', message);
-      
-        switch (message.command) {
-          case 'getAnalysis':
-          console.log('Sending analysis data to webview');
-            panel.webview.postMessage({ 
-            type: 'fromExtension',
-              command: 'analysis', 
-              data: analysis 
+      switch (message.command) {
+        case 'startAnalysis':
+          try {
+            const analysisResult = await analyzeProject(panel);
+            panel.webview.postMessage({
+              type: 'fromExtension',
+              command: 'showAnalysis',
+              data: analysisResult,
             });
-            break;
+          } catch (error) {
+            panel.webview.postMessage({
+              type: 'fromExtension',
+              command: 'error',
+              error: error.message,
+            });
+          }
+          break;
+        case 'getAnalysis':
+          console.log('Sending analysis data to webview');
+          panel.webview.postMessage({
+            type: 'fromExtension',
+            command: 'analysis',
+            data: analysis,
+          });
+          break;
         case 'getShader':
           try {
             const shaderPath = path.join(__dirname, '..', 'media', message.path);
@@ -87,14 +88,14 @@ function showVisualization(analysis, context) {
             panel.webview.postMessage({
               command: 'shaderContent',
               path: message.path,
-              content: shaderContent
+              content: shaderContent,
             });
           } catch (error) {
             console.error(`Error loading shader: ${error.message}`);
             panel.webview.postMessage({
               command: 'shaderError',
               path: message.path,
-              error: error.message
+              error: error.message,
             });
           }
           break;
@@ -104,15 +105,65 @@ function showVisualization(analysis, context) {
         case 'error':
           console.error('Webview error:', message.message);
           break;
-        }
-      },
-      undefined,
-      context.subscriptions
-    );
+      }
+    },
+    undefined,
+    context.subscriptions
+  );
 }
 
-function getWebviewContent(webview, bundleUri, stylesUri) {
-    return `<!DOCTYPE html>
+async function analyzeProject(panel) {
+  try {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      throw new Error('No active editor found');
+    }
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      throw new Error('No workspace folder is open');
+    }
+
+    const rootPath = workspaceFolders[0].uri.fsPath;
+
+    // Send progress updates
+    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 10 });
+    const result = await runAnalysis(rootPath, panel);
+    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 100 });
+    return result;
+  } catch (error) {
+    vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
+    throw error;
+  }
+}
+
+async function runAnalysis(rootPath, panel) {
+  try {
+    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 20 });
+    const response = await fetch('http://localhost:5000/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        project_dir: rootPath,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 80 });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching analysis:', error);
+    throw error;
+  }
+}
+
+function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
+  return `<!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
@@ -121,127 +172,61 @@ function getWebviewContent(webview, bundleUri, stylesUri) {
         <title>Code Visualization</title>
         <link href="${stylesUri}" rel="stylesheet">
         <style>
-            body {
-                margin: 0;
-                padding: 0;
-                width: 100vw;
-                height: 100vh;
-                overflow: hidden;
-                background: #1e1e1e;
-            }
-            #root {
-                width: 100%;
-                height: 100%;
-                position: absolute;
-                top: 0;
-                left: 0;
-            }
-            .debug-info {
-                position: fixed;
-                top: 10px;
-                left: 10px;
-                color: white;
-                font-family: monospace;
-                z-index: 1000;
-            }
+            body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #1e1e1e; color: white; font-family: monospace; }
+            #root { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+            .debug-info { position: fixed; top: 10px; left: 10px; color: white; font-family: monospace; z-index: 1000; }
+            .data-display { position: fixed; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.8); padding: 10px; border-radius: 5px; max-width: 80%; max-height: 80%; overflow: auto; z-index: 1000; }
+            .data-display pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; }
         </style>
     </head>
     <body>
         <div id="root"></div>
+        <div class="data-display">
+            <h3>Project Directory:</h3>
+            <pre>${projectDir}</pre>
+        </div>
         <div class="debug-info"></div>
         <script>
-            // Initialize VS Code API
             window.vscode = acquireVsCodeApi();
-            
-            // Setup logging
             const debugInfo = document.querySelector('.debug-info');
             const originalLog = console.log;
             const originalError = console.error;
-            
+
             console.log = function(...args) {
                 const safeArgs = args.map(arg => {
                     try {
-                        if (typeof arg === 'object') {
-                            const seen = new WeakSet();
-                            return JSON.stringify(arg, function(key, value) {
-                                if (key === 'stateNode' || key === '__reactContainer$' || key === 'containerInfo') {
-                                    return '[Internal]';
-                                }
-                                if (value instanceof Element) {
-                                    return '[' + value.tagName + ']';
-                                }
-                                if (typeof value === 'function') {
-                                    return '[Function]';
-                                }
-                                if (typeof value === 'object' && value !== null) {
-                                    if (seen.has(value)) {
-                                        return '[Circular]';
-                                    }
-                                    seen.add(value);
-                                }
-                                return value;
-                            });
-                        }
-                        return arg;
+                        return typeof arg === 'object' ? JSON.stringify(arg) : arg;
                     } catch (e) {
                         return '[Circular Structure]';
                     }
                 });
                 debugInfo.innerHTML += safeArgs.join(' ') + '<br>';
-                window.vscode.postMessage({
-                    type: 'log',
-                    message: safeArgs.join(' ')
-                });
+                window.vscode.postMessage({ type: 'log', message: safeArgs.join(' ') });
                 originalLog.apply(console, args);
             };
-            
+
             console.error = function(...args) {
                 const safeArgs = args.map(arg => {
                     try {
-                        if (typeof arg === 'object') {
-                            const seen = new WeakSet();
-                            return JSON.stringify(arg, function(key, value) {
-                                if (key === 'stateNode' || key === '__reactContainer$' || key === 'containerInfo') {
-                                    return '[Internal]';
-                                }
-                                if (value instanceof Element) {
-                                    return '[' + value.tagName + ']';
-                                }
-                                if (typeof value === 'function') {
-                                    return '[Function]';
-                                }
-                                if (typeof value === 'object' && value !== null) {
-                                    if (seen.has(value)) {
-                                        return '[Circular]';
-                                    }
-                                    seen.add(value);
-                                }
-                                return value;
-                            });
-                        }
-                        return arg;
+                        return typeof arg === 'object' ? JSON.stringify(arg) : arg;
                     } catch (e) {
                         return '[Circular Structure]';
                     }
                 });
                 debugInfo.innerHTML += '<span style="color: red;">' + safeArgs.join(' ') + '</span><br>';
-                window.vscode.postMessage({
-                    type: 'error',
-                    message: safeArgs.join(' ')
-                });
+                window.vscode.postMessage({ type: 'error', message: safeArgs.join(' ') });
                 originalError.apply(console, args);
             };
-            
-            // Error handling
+
             window.addEventListener('error', function(event) {
                 console.error('Error:', event.message, 'at', event.filename, ':', event.lineno);
             });
-            
-            // Load bundle
+
             const script = document.createElement('script');
             script.src = '${bundleUri}';
             script.onload = () => {
                 console.log('Bundle loaded successfully');
+                if (window.updateUI) window.updateUI();
             };
             script.onerror = (error) => {
                 console.error('Failed to load bundle:', error);
@@ -260,5 +245,5 @@ function deactivate() {
 
 module.exports = {
   activate,
-  deactivate
+  deactivate,
 };

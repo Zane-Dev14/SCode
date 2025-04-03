@@ -79,16 +79,19 @@ def analyze():
         
         # Save result to file
         output_dir = os.path.join(os.path.dirname(__file__), "sample_project")
+        output_file2 = os.path.join(os.path.dirname(__file__), "sample_project", "extracted.json")
+
         os.makedirs(output_dir, exist_ok=True)
         output_file = os.path.join(output_dir, "ast_output.json")
         with open(output_file, "w") as f:
             json.dump(result, f)
         print(f"AST saved to {output_file}")
-        
+        with open(output_file2, "r") as f:
+            extracted_data = json.load(f)
         return jsonify({
             "status": "success",
             "message": "Analysis complete",
-            "data": result
+            "data": extracted_data
         })
     except Exception as e:
         error_msg = f"Error during analysis: {str(e)}"

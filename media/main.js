@@ -185,6 +185,10 @@ function updateUI() {
                  console.log('Startup animation complete.');
                  state.appState = 'loading'; // Transition to loading state
                  updateUI(); // Render the loading screen
+                 // Request analysis from the extension
+                 window.vscode.postMessage({
+                     command: 'startAnalysis'
+                 });
              });
              currentCleanup = startup.cleanup;
              break;
@@ -192,7 +196,6 @@ function updateUI() {
             console.log('Initializing loading screen...');
             const loadingUpdater = initLoadingScreen(root, state.progress);
             currentViewUpdater = loadingUpdater; // Store the updater
-            // No specific cleanup needed for loading screen itself, its content is cleared
             break;
         case 'entrypoint':
             console.log('Initializing entrypoint selector...');
@@ -208,6 +211,7 @@ function updateUI() {
              showError(state.error || 'An unknown error occurred.');
              break;
     }
+    
 }
 
 // Show error message

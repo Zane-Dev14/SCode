@@ -159,9 +159,15 @@ export function initCodeVisualizer(root, analysisData, selectedEntrypoint) {
     });
 
     // Return cleanup function
-    return () => {
+    const cleanup = () => {
         simulation.stop();
         renderer.dispose();
         d3Background.cleanup();
+        svg.remove(); // Remove D3 SVG element
+        cancelAnimationFrame(animationFrameId); // Assuming animateLoop sets an ID
+        window.removeEventListener('resize', resizeHandler); // Assuming resize event listener exists
+        // Remove other listeners if added
     };
+    
+    return { cleanup }; // Return cleanup function
 } 

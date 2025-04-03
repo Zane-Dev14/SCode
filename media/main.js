@@ -13,9 +13,11 @@ import { initD3Background } from './utils/d3Background';
 import { initCodeVisualizer } from './utils/codeVisualizer';
 import { initEntrypointSelector } from './utils/entrypointSelector';
 import { initLoadingScreen } from './utils/loadingScreen';
+import { initStartupAnimation } from './utils/startupAnimation';
 
 // State management
 const state = {
+    appState: 'startup',
     loading: true,
     progress: 0,
     currentView: 'loading',
@@ -117,44 +119,43 @@ window.addEventListener('message', function(event) {
     }
 });
 
-// Keep track of the current view's update functions (if any)
+// Keep track of the current view's cleanup functions
+let currentCleanup = null;
 let currentViewUpdater = null;
 
 // Handle extension messages
 function handleExtensionMessage(message) {
     switch (message.command) {
         case 'load':
-            state.loading = true;
-            state.progress = 0;
-            state.currentView = 'loading';
-            updateUI();
-            break;
         case 'analyze':
-            state.loading = true;
-            state.progress = 0;
-            state.currentView = 'loading';
-            updateUI();
+            // If we receive load/analyze during startup, wait until startup finishes
+            if (state.appState !== 'startup') {
+                state.loading = true;
+                state.progress = 0;
+                state.appState = 'loading';
+                updateUI();
+            }
             break;
         case 'showAnalysis':
-            state.loading = false;
-            state.analysisData = message.data;
-            state.currentView = 'entrypoint';
-            updateUI();
+            // If we receive analysis during startup, wait until startup finishes
+             if (state.appState !== 'startup') {
+                state.loading = false;
+                state.analysisData = message.data;
+                state.appState = 'entrypoint';
+                updateUI();
+            }
             break;
         case 'updateProgress':
             state.progress = message.progress;
-            // If the loading screen is active, call its update function
-            if (state.currentView === 'loading' && currentViewUpdater && typeof currentViewUpdater.updateProgress === 'function') {
+            // Update progress only if the loading screen is the active state
+            if (state.appState === 'loading' && currentViewUpdater && typeof currentViewUpdater.updateProgress === 'function') {
                 currentViewUpdater.updateProgress(state.progress);
-            } else if (state.currentView !== 'loading') {
-                // Reset updater if we switched away from loading screen
-                currentViewUpdater = null;
             }
-            // Note: No need to call updateUI() here unless the view itself changes
             break;
         case 'error':
             state.error = message.error;
             state.loading = false;
+            state.appState = 'error';
             updateUI();
             break;
     }
@@ -165,24 +166,47 @@ function updateUI() {
     const root = document.getElementById('root');
     root.innerHTML = '';
 
-    if (state.error) {
+    // Call cleanup function for the previous view if it exists
+    if (typeof currentCleanup === 'function') {
+        currentCleanup();
+        currentCleanup = null;
+    }
+    currentViewUpdater = null; // Reset updater
+
+    if (state.error && state.appState !== 'startup') { // Don't show error during startup animation
         showError(state.error);
         return;
     }
 
-    switch (state.currentView) {
+    switch (state.appState) {
+        case 'startup':
+             console.log('Starting startup animation...');
+             const startup = initStartupAnimation(root, () => {
+                 console.log('Startup animation complete.');
+                 state.appState = 'loading'; // Transition to loading state
+                 updateUI(); // Render the loading screen
+             });
+             currentCleanup = startup.cleanup;
+             break;
         case 'loading':
-            // Store the returned updater from initLoadingScreen
-            currentViewUpdater = initLoadingScreen(root, state.progress);
+            console.log('Initializing loading screen...');
+            const loadingUpdater = initLoadingScreen(root, state.progress);
+            currentViewUpdater = loadingUpdater; // Store the updater
+            // No specific cleanup needed for loading screen itself, its content is cleared
             break;
         case 'entrypoint':
-            initEntrypointSelector(root, state.analysisData, handleEntrypointSelect);
-            currentViewUpdater = null; // Reset updater
+            console.log('Initializing entrypoint selector...');
+            const entrypoint = initEntrypointSelector(root, state.analysisData, handleEntrypointSelect);
+            currentCleanup = entrypoint.cleanup; // Store cleanup function
             break;
         case 'visualization':
-            initCodeVisualizer(root, state.analysisData, state.selectedEntrypoint);
-            currentViewUpdater = null; // Reset updater
+            console.log('Initializing code visualizer...');
+            const visualizer = initCodeVisualizer(root, state.analysisData, state.selectedEntrypoint);
+             currentCleanup = visualizer.cleanup; // Store cleanup function
             break;
+         case 'error': // Handle error state explicitly if needed
+             showError(state.error || 'An unknown error occurred.');
+             break;
     }
 }
 
@@ -200,13 +224,13 @@ function showError(error) {
 // Handle entrypoint selection
 function handleEntrypointSelect(entrypoint) {
     state.selectedEntrypoint = entrypoint;
-    state.currentView = 'visualization';
+    state.appState = 'visualization';
     updateUI();
 }
 
 // Initialize app
 console.log('Initializing application...');
-updateUI();
+updateUI(); // Start with the initial state (startup)
 
 // REMOVED OBSOLETE WEBGL VISUALIZATION CODE BLOCK
 // The code from approximately line 211 to 433 related to 

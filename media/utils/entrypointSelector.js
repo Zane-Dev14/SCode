@@ -83,8 +83,14 @@ export function initEntrypointSelector(root, analysisData, onSelect) {
     animateLoop();
 
     // Return cleanup function
-    return () => {
+    const cleanup = () => {
+        cancelAnimationFrame(animationFrameId); // Assuming animateLoop sets an ID
         renderer.dispose();
         d3Background.cleanup();
+        // Add any other specific cleanup for this view
+        window.removeEventListener('mousemove', mouseListener); // Assuming mouseListener exists
+        window.removeEventListener('resize', resizeListener); // Assuming resizeListener exists
     };
+    
+    return { cleanup }; // Return cleanup function
 } 

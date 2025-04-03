@@ -24,22 +24,27 @@ class CodeAnalyzer {
         // Register the analyze command
         let analyzeCommand = vscode.commands.registerCommand('scode.analyze', async () => {
             try {
-                // Get workspace folder
                 const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
                 if (!workspaceFolder) {
                     throw new Error('No workspace folder found. Please open a folder first.');
                 }
                 
-                // Create and show panel early to display loading state
+                // Log and validate the project directory
+                const projectDir = workspaceFolder.uri.fsPath;
+                this.outputChannel.appendLine(`Preparing to analyze projectDir: ${projectDir}`);
+                if (!fs.existsSync(projectDir)) {
+                    this.outputChannel.appendLine(`Error: Directory does not exist: ${projectDir}`);
+                    throw new Error(`Project directory does not exist: ${projectDir}`);
+                }
+                this.outputChannel.appendLine(`Confirmed directory exists. Contents: ${fs.readdirSync(projectDir).join(', ')}`);
+        
                 this.createOrShowPanel();
                 
-                // Display loading state
                 this.panel.webview.postMessage({
                     command: 'loading',
                     message: 'Setting up Python environment...'
                 });
                 
-                // 1. Setup Python environment and start backend
                 this.outputChannel.appendLine('Setting up Python environment...');
                 await pythonManager.setupPythonEnvironment(this.extensionPath)
                     .catch(error => {
@@ -56,13 +61,14 @@ class CodeAnalyzer {
                     message: 'Python server started. Analyzing code...'
                 });
                 
-                // 2. Send analyze command to the panel
+                // Send the analyze command with validated projectDir
+                this.outputChannel.appendLine(`Sending analyze command with projectDir: ${projectDir}`);
                 this.panel.webview.postMessage({
                     command: 'analyze',
-                    projectDir: workspaceFolder.uri.fsPath
+                    projectDir: projectDir
                 });
             } catch (error) {
-                this.outputChannel.appendLine(`Errosr: ${error.message}`);
+                this.outputChannel.appendLine(`Error: ${error.message}`);
                 if (this.panel) {
                     this.panel.webview.postMessage({
                         command: 'error',
@@ -73,6 +79,7 @@ class CodeAnalyzer {
                 }
             }
         });
+        
 
         context.subscriptions.push(analyzeCommand);
         context.subscriptions.push(this.outputChannel);

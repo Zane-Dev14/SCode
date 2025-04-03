@@ -21,65 +21,109 @@ def analyze():
     project_dir = data.get('project_dir')
     entrypoint = data.get('entrypoint')
     
+    # Log incoming data
+    print(f"Received project_dir: {project_dir}")
+    print(f"Received entrypoint: {entrypoint}")
+    
+    # Validate project_dir
     if not project_dir:
+        print("No project directory specified")
         return jsonify({"error": "No project directory specified"}), 400
     
-    # Ensure the directory exists
-    if not os.path.isdir(project_dir):
-        return jsonify({"error": f"Directory {project_dir} does not exist"}), 400
+    # Convert to absolute path and log
+    abs_project_dir = os.path.abspath(project_dir)
+    print(f"Absolute path: {abs_project_dir}")
+    
+    # Check if directory exists
+    if not os.path.isdir(abs_project_dir):
+        print(f"Directory does not exist: {abs_project_dir}")
+        return jsonify({"error": f"Directory {abs_project_dir} does not exist"}), 400
+    
+    # Check directory contents
+    try:
+        files_in_dir = os.listdir(abs_project_dir)
+        print(f"Files in directory: {files_in_dir}")
+        if not files_in_dir:
+            print("Directory is empty")
+            return jsonify({"error": f"Directory {abs_project_dir} is empty"}), 400
+    except PermissionError as e:
+        print(f"Permission denied accessing directory: {str(e)}")
+        return jsonify({"error": f"Permission denied: {str(e)}"}), 403
+    except Exception as e:
+        print(f"Error accessing directory: {str(e)}")
+        return jsonify({"error": f"Error accessing directory: {str(e)}"}), 500
     
     try:
         # Find a suitable entrypoint if not provided
         if not entrypoint:
-            # First try to find common entry points
-            common_entrypoints = ['index.js', 'app.js', 'main.js', 'main.py', 'app.py','main.rs']
+            print("No entrypoint provided, searching for one...")
+            common_entrypoints = ['index.js', 'app.js', 'main.js', 'main.py', 'app.py', 'main.rs']
             for entry in common_entrypoints:
-                potential_path = os.path.join(project_dir, entry)
-                if os.path.exists(potential_path):
-                    entrypoint = entry  # Use relative path instead of absolute
+                potential_path = os.path.join(abs_project_dir, entry)
+                if os.path.isfile(potential_path):  # Use isfile to ensure it’s a file
+                    entrypoint = entry
+                    print(f"Found common entrypoint: {entrypoint}")
                     break
             
-            # If still not found, find first suitable file
+            # If no common entrypoint, find the first supported file
             if not entrypoint:
-                for root, _, files in os.walk(project_dir):
+                for root, _, files in os.walk(abs_project_dir):
                     for file in files:
-                        if file.endswith(('.js', '.ts', '.jsx', '.tsx', '.py')):
-                            entrypoint = os.path.relpath(os.path.join(root, file), project_dir)  # Store relative path
+                        if file.endswith(('.js', '.ts', '.jsx', '.tsx', '.py', '.rs')):
+                            entrypoint = os.path.relpath(os.path.join(root, file), abs_project_dir)
+                            print(f"Selected first suitable file as entrypoint: {entrypoint}")
                             break
                     if entrypoint:
                         break
         
-        if not entrypoint or not os.path.exists(os.path.join(project_dir, entrypoint)):
-            possible_entrypoints = find_possible_entrypoints(project_dir)
+        # Validate entrypoint
+        if not entrypoint:
+            print("No suitable entrypoint found")
+            possible_entrypoints = find_possible_entrypoints(abs_project_dir)
             return jsonify({
                 "status": "needs_entrypoint",
                 "message": "Please select an entry point file",
                 "options": possible_entrypoints
-            }), 200  # Use 200 status code for this case
-            
+            }), 200
+        
+        full_entrypoint_path = os.path.join(abs_project_dir, entrypoint)
+        if not os.path.isfile(full_entrypoint_path):
+            print(f"Entrypoint does not exist or is not a file: {full_entrypoint_path}")
+            possible_entrypoints = find_possible_entrypoints(abs_project_dir)
+            return jsonify({
+                "status": "needs_entrypoint",
+                "message": f"Entrypoint {entrypoint} not found",
+                "options": possible_entrypoints
+            }), 200
+        
         # Generate AST
-        result = generate_project_asts(project_dir, os.path.join(project_dir, entrypoint))
+        print(f"Generating AST for {abs_project_dir} with entrypoint {entrypoint}")
+        result = generate_project_asts(abs_project_dir, full_entrypoint_path)
         
         # Save result to file
         output_dir = os.path.join(os.path.dirname(__file__), "output")
         os.makedirs(output_dir, exist_ok=True)
-        
-        with open(os.path.join(output_dir, "ast_data.json"), "w") as f:
+        output_file = os.path.join(output_dir, "ast_data.json")
+        with open(output_file, "w") as f:
             json.dump(result, f)
-            
+        print(f"AST saved to {output_file}")
+        
         return jsonify({
             "status": "success",
             "message": "Analysis complete",
             "data": result
         })
     except Exception as e:
-        app.logger.error(f"Error during analysis: {str(e)}", exc_info=True)
-        # Make sure to return a properly formatted JSON response
+        error_msg = f"Error during analysis: {str(e)}"
+        print(error_msg)
+        app.logger.error(error_msg, exc_info=True)
         return jsonify({
             "status": "error",
-            "message": f"Analysis failed: {str(e)}",
+            "message": error_msg,
             "error": str(e)
         }), 500
+    
+
 @app.route('/ast', methods=['GET'])
 def get_ast():
     """Get the AST for the analyzed project"""
@@ -165,4 +209,4 @@ if __name__ == '__main__':
     print(f"Debug mode: {debug}")
     
     # Run the server
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    app.run(host='0.0.0.0', port=port, debug=True)

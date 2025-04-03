@@ -366,13 +366,13 @@ def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     #         }
     
     # Use provided output file or default to a project-specific path
-    output_path = output_file or "/app/backend/sample_project/ast_output.json"
+    output_path = output_file or "sample_project/ast_output.json"
     # print(ast_map_dict)
     save_ast_to_file(ast_map_dict, output_path)
     # print(f"\n\n{ast_map_dict}\n")
     # print(extract_ast_details(ast_map_dict,entrypoint_file))
     writeTojson=extract_ast_details(ast_map_dict,entrypoint_file)
-    with open('/app/backend/sample_project/extracted.json','w') as f:
+    with open('sample_project/extracted.json','w') as f:
         json.dump(writeTojson,f)
     return ast_map_dict  # Return for further use or testing
 

@@ -1,71 +1,215 @@
 {
     "main_ast": {
-        "type": "program",
+        "type": "module",
         "children": [
             {
                 "type": "import_statement",
                 "children": [
                     {
-                        "type": "import_clause",
-                        "children": [
-                            {
-                                "type": "identifier",
-                                "Text": "React"
-                            }
-                        ]
+                        "type": "dotted_name",
+                        "Text": "subprocess"
+                    }
+                ]
+            },
+            {
+                "type": "import_statement",
+                "children": [
+                    {
+                        "type": "dotted_name",
+                        "Text": "os"
+                    }
+                ]
+            },
+            {
+                "type": "function_definition",
+                "source": {
+                    "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                    "line": 4
+                },
+                "function_name": "package_executable_to_deb",
+                "param_count": 1,
+                "children": [
+                    {
+                        "type": "call",
+                        "source": {
+                            "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                            "line": 6
+                        },
+                        "function_call": "os",
+                        "is_library": true,
+                        "arguments": {
+                            "Text": "rust_project_path"
+                        }
                     },
                     {
-                        "type": "string",
-                        "Text": "'react'"
-                    }
-                ]
-            },
-            {
-                "type": "import_statement",
-                "children": [
-                    {
-                        "type": "string",
-                        "Text": "'./App.css'"
-                    }
-                ]
-            },
-            {
-                "type": "import_statement",
-                "children": [
-                    {
-                        "type": "import_clause",
+                        "type": "try_statement",
                         "children": [
                             {
-                                "type": "named_imports",
+                                "type": "block",
                                 "children": [
                                     {
-                                        "type": "import_specifier",
+                                        "type": "call",
+                                        "source": {
+                                            "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                            "line": 10
+                                        },
+                                        "function_call": "subprocess",
+                                        "is_library": true,
+                                        "arguments": [
+                                            {
+                                                "type": "list",
+                                                "children": [
+                                                    {
+                                                        "type": "string",
+                                                        "Text": "\"cargo\""
+                                                    },
+                                                    {
+                                                        "type": "string",
+                                                        "Text": "\"build\""
+                                                    },
+                                                    {
+                                                        "type": "string",
+                                                        "Text": "\"--release\""
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "keyword_argument",
+                                                "children": [
+                                                    {
+                                                        "type": "identifier",
+                                                        "Text": "check"
+                                                    },
+                                                    {
+                                                        "type": "true"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "except_clause",
+                                "children": [
+                                    {
+                                        "type": "attribute",
                                         "children": [
                                             {
                                                 "type": "identifier",
-                                                "Text": "BrowserRouter"
+                                                "Text": "subprocess"
                                             },
                                             {
                                                 "type": "identifier",
-                                                "Text": "Router"
+                                                "Text": "CalledProcessError"
                                             }
                                         ]
                                     },
                                     {
-                                        "type": "import_specifier",
+                                        "type": "block",
+                                        "children": [
+                                            {
+                                                "type": "call",
+                                                "source": {
+                                                    "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                    "line": 12
+                                                },
+                                                "function_call": "print",
+                                                "is_library": true,
+                                                "arguments": {
+                                                    "Text": "\"Build failed\""
+                                                }
+                                            },
+                                            {
+                                                "type": "return_statement"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "try_statement",
+                        "children": [
+                            {
+                                "type": "block",
+                                "children": [
+                                    {
+                                        "type": "call",
+                                        "source": {
+                                            "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                            "line": 17
+                                        },
+                                        "function_call": "subprocess",
+                                        "is_library": true,
+                                        "arguments": [
+                                            {
+                                                "type": "list",
+                                                "children": [
+                                                    {
+                                                        "type": "string",
+                                                        "Text": "\"cargo\""
+                                                    },
+                                                    {
+                                                        "type": "string",
+                                                        "Text": "\"install\""
+                                                    },
+                                                    {
+                                                        "type": "string",
+                                                        "Text": "\"cargo-deb\""
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "keyword_argument",
+                                                "children": [
+                                                    {
+                                                        "type": "identifier",
+                                                        "Text": "check"
+                                                    },
+                                                    {
+                                                        "type": "true"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "except_clause",
+                                "children": [
+                                    {
+                                        "type": "attribute",
                                         "children": [
                                             {
                                                 "type": "identifier",
-                                                "Text": "Routes"
+                                                "Text": "subprocess"
+                                            },
+                                            {
+                                                "type": "identifier",
+                                                "Text": "CalledProcessError"
                                             }
                                         ]
                                     },
                                     {
-                                        "type": "import_specifier",
+                                        "type": "block",
                                         "children": [
                                             {
-                                                "type": "identifier",
-                                                "Text": "Route"
+                                                "type": "call",
+                                                "source": {
+                                                    "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                    "line": 19
+                                                },
+                                                "function_call": "print",
+                                                "is_library": true,
+                                                "arguments": {
+                                                    "Text": "\"cargo-deb installation failed\""
+                                                }
+                                            },
+                                            {
+                                                "type": "return_statement"
                                             }
                                         ]
                                     }
@@ -74,26 +218,62 @@
                         ]
                     },
                     {
-                        "type": "string",
-                        "Text": "'react-router-dom'"
-                    }
-                ]
-            },
-            {
-                "type": "import_statement",
-                "children": [
-                    {
-                        "type": "import_clause",
+                        "type": "assignment",
+                        "variables": {
+                            "output_path": "subprocess.run([\"cargo\", \"deb\"], check=True, capture_output=True)"
+                        },
+                        "source": {
+                            "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                            "line": 24
+                        },
                         "children": [
                             {
-                                "type": "named_imports",
-                                "children": [
+                                "type": "identifier",
+                                "Text": "output_path"
+                            },
+                            {
+                                "type": "call",
+                                "source": {
+                                    "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                    "line": 24
+                                },
+                                "function_call": "subprocess",
+                                "is_library": true,
+                                "arguments": [
                                     {
-                                        "type": "import_specifier",
+                                        "type": "list",
+                                        "children": [
+                                            {
+                                                "type": "string",
+                                                "Text": "\"cargo\""
+                                            },
+                                            {
+                                                "type": "string",
+                                                "Text": "\"deb\""
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "keyword_argument",
                                         "children": [
                                             {
                                                 "type": "identifier",
-                                                "Text": "Navbar"
+                                                "Text": "check"
+                                            },
+                                            {
+                                                "type": "true"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "keyword_argument",
+                                        "children": [
+                                            {
+                                                "type": "identifier",
+                                                "Text": "capture_output"
+                                            },
+                                            {
+                                                "type": "true"
                                             }
                                         ]
                                     }
@@ -102,26 +282,40 @@
                         ]
                     },
                     {
-                        "type": "string",
-                        "Text": "'./components/navbar'"
-                    }
-                ]
-            },
-            {
-                "type": "import_statement",
-                "children": [
-                    {
-                        "type": "import_clause",
+                        "type": "assignment",
+                        "variables": {
+                            "deb_file_path": "output_path.stdout.decode().strip().split(\"\\n\")[-1]"
+                        },
+                        "source": {
+                            "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                            "line": 25
+                        },
                         "children": [
                             {
-                                "type": "named_imports",
+                                "type": "identifier",
+                                "Text": "deb_file_path"
+                            },
+                            {
+                                "type": "subscript",
                                 "children": [
                                     {
-                                        "type": "import_specifier",
+                                        "type": "call",
+                                        "source": {
+                                            "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                            "line": 25
+                                        },
+                                        "function_call": "output_path",
+                                        "is_library": true,
+                                        "arguments": {
+                                            "Text": "\"\\n\""
+                                        }
+                                    },
+                                    {
+                                        "type": "unary_operator",
                                         "children": [
                                             {
-                                                "type": "identifier",
-                                                "Text": "Shop"
+                                                "type": "integer",
+                                                "Text": "1"
                                             }
                                         ]
                                     }
@@ -130,54 +324,98 @@
                         ]
                     },
                     {
-                        "type": "string",
-                        "Text": "'./pages/shop'"
-                    }
-                ]
-            },
-            {
-                "type": "import_statement",
-                "children": [
-                    {
-                        "type": "import_clause",
+                        "type": "try_statement",
                         "children": [
                             {
-                                "type": "named_imports",
+                                "type": "block",
                                 "children": [
                                     {
-                                        "type": "import_specifier",
-                                        "children": [
+                                        "type": "call",
+                                        "source": {
+                                            "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                            "line": 29
+                                        },
+                                        "function_call": "subprocess",
+                                        "is_library": true,
+                                        "arguments": [
                                             {
-                                                "type": "identifier",
-                                                "Text": "Cart"
+                                                "type": "list",
+                                                "children": [
+                                                    {
+                                                        "type": "string",
+                                                        "Text": "\"dpkg-deb\""
+                                                    },
+                                                    {
+                                                        "type": "string",
+                                                        "Text": "\"-I\""
+                                                    },
+                                                    {
+                                                        "type": "identifier",
+                                                        "Text": "deb_file_path"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "keyword_argument",
+                                                "children": [
+                                                    {
+                                                        "type": "identifier",
+                                                        "Text": "check"
+                                                    },
+                                                    {
+                                                        "type": "true"
+                                                    }
+                                                ]
                                             }
                                         ]
+                                    },
+                                    {
+                                        "type": "call",
+                                        "source": {
+                                            "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                            "line": 30
+                                        },
+                                        "function_call": "print",
+                                        "is_library": true,
+                                        "arguments": {
+                                            "Text": "\"Verification successful\""
+                                        }
                                     }
                                 ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "string",
-                        "Text": "'./pages/cart'"
-                    }
-                ]
-            },
-            {
-                "type": "import_statement",
-                "children": [
-                    {
-                        "type": "import_clause",
-                        "children": [
+                            },
                             {
-                                "type": "named_imports",
+                                "type": "except_clause",
                                 "children": [
                                     {
-                                        "type": "import_specifier",
+                                        "type": "attribute",
                                         "children": [
                                             {
                                                 "type": "identifier",
-                                                "Text": "SearchProvider"
+                                                "Text": "subprocess"
+                                            },
+                                            {
+                                                "type": "identifier",
+                                                "Text": "CalledProcessError"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "block",
+                                        "children": [
+                                            {
+                                                "type": "call",
+                                                "source": {
+                                                    "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                    "line": 32
+                                                },
+                                                "function_call": "print",
+                                                "is_library": true,
+                                                "arguments": {
+                                                    "Text": "\"Verification failed\""
+                                                }
+                                            },
+                                            {
+                                                "type": "return_statement"
                                             }
                                         ]
                                     }
@@ -186,385 +424,525 @@
                         ]
                     },
                     {
-                        "type": "string",
-                        "Text": "'./components/search'"
-                    }
-                ]
-            },
-            {
-                "type": "import_statement",
-                "children": [
-                    {
-                        "type": "import_clause",
-                        "children": [
+                        "type": "call",
+                        "source": {
+                            "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                            "line": 35
+                        },
+                        "function_call": "print",
+                        "is_library": true,
+                        "arguments": [
                             {
-                                "type": "named_imports",
-                                "children": [
-                                    {
-                                        "type": "import_specifier",
-                                        "children": [
-                                            {
-                                                "type": "identifier",
-                                                "Text": "ShopContextProvider"
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "string",
-                        "Text": "'./context/context'"
-                    }
-                ]
-            },
-            {
-                "type": "import_statement",
-                "children": [
-                    {
-                        "type": "import_clause",
-                        "children": [
+                                "type": "string",
+                                "Text": "\"Deb file path: \""
+                            },
                             {
-                                "type": "named_imports",
-                                "children": [
-                                    {
-                                        "type": "import_specifier",
-                                        "children": [
-                                            {
-                                                "type": "identifier",
-                                                "Text": "CheckoutPage"
-                                            }
-                                        ]
-                                    }
-                                ]
+                                "type": "identifier",
+                                "Text": "deb_file_path"
                             }
                         ]
                     },
-                    {
-                        "type": "string",
-                        "Text": "\"./pages/checkout\""
-                    }
-                ]
-            },
-            {
-                "type": "function_declaration",
-                "source": {
-                    "file": "/app/backend/sample_project/motion/src/App.js",
-                    "line": 10
-                },
-                "function_name": "App",
-                "param_count": 0,
-                "children": [
                     {
                         "type": "return_statement",
                         "children": [
                             {
-                                "type": "parenthesized_expression",
-                                "children": [
-                                    {
-                                        "type": "jsx_element",
-                                        "children": [
-                                            {
-                                                "type": "jsx_opening_element",
-                                                "children": [
-                                                    {
-                                                        "type": "identifier",
-                                                        "Text": "div"
-                                                    },
-                                                    {
-                                                        "type": "jsx_attribute",
-                                                        "children": [
-                                                            {
-                                                                "type": "property_identifier"
-                                                            },
-                                                            {
-                                                                "type": "string",
-                                                                "Text": "\"App\""
-                                                            }
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                "type": "jsx_element",
-                                                "children": [
-                                                    {
-                                                        "type": "jsx_opening_element",
-                                                        "children": [
-                                                            {
-                                                                "type": "identifier",
-                                                                "Text": "ShopContextProvider"
-                                                            }
-                                                        ]
-                                                    },
-                                                    {
-                                                        "type": "jsx_element",
-                                                        "children": [
-                                                            {
-                                                                "type": "jsx_opening_element",
-                                                                "children": [
-                                                                    {
-                                                                        "type": "identifier",
-                                                                        "Text": "Router"
-                                                                    }
-                                                                ]
-                                                            },
-                                                            {
-                                                                "type": "jsx_element",
-                                                                "children": [
-                                                                    {
-                                                                        "type": "jsx_opening_element",
-                                                                        "children": [
-                                                                            {
-                                                                                "type": "identifier",
-                                                                                "Text": "SearchProvider"
-                                                                            }
-                                                                        ]
-                                                                    },
-                                                                    {
-                                                                        "type": "jsx_self_closing_element",
-                                                                        "children": [
-                                                                            {
-                                                                                "type": "identifier",
-                                                                                "Text": "Navbar"
-                                                                            }
-                                                                        ]
-                                                                    },
-                                                                    {
-                                                                        "type": "jsx_element",
-                                                                        "children": [
-                                                                            {
-                                                                                "type": "jsx_opening_element",
-                                                                                "children": [
-                                                                                    {
-                                                                                        "type": "identifier",
-                                                                                        "Text": "Routes"
-                                                                                    }
-                                                                                ]
-                                                                            },
-                                                                            {
-                                                                                "type": "jsx_self_closing_element",
-                                                                                "children": [
-                                                                                    {
-                                                                                        "type": "identifier",
-                                                                                        "Text": "Route"
-                                                                                    },
-                                                                                    {
-                                                                                        "type": "jsx_attribute",
-                                                                                        "children": [
-                                                                                            {
-                                                                                                "type": "property_identifier"
-                                                                                            },
-                                                                                            {
-                                                                                                "type": "string",
-                                                                                                "Text": "\"/\""
-                                                                                            }
-                                                                                        ]
-                                                                                    },
-                                                                                    {
-                                                                                        "type": "jsx_attribute",
-                                                                                        "children": [
-                                                                                            {
-                                                                                                "type": "property_identifier"
-                                                                                            },
-                                                                                            {
-                                                                                                "type": "jsx_expression",
-                                                                                                "children": [
-                                                                                                    {
-                                                                                                        "type": "jsx_self_closing_element",
-                                                                                                        "children": [
-                                                                                                            {
-                                                                                                                "type": "identifier",
-                                                                                                                "Text": "Shop"
-                                                                                                            }
-                                                                                                        ]
-                                                                                                    }
-                                                                                                ]
-                                                                                            }
-                                                                                        ]
-                                                                                    }
-                                                                                ]
-                                                                            },
-                                                                            {
-                                                                                "type": "jsx_self_closing_element",
-                                                                                "children": [
-                                                                                    {
-                                                                                        "type": "identifier",
-                                                                                        "Text": "Route"
-                                                                                    },
-                                                                                    {
-                                                                                        "type": "jsx_attribute",
-                                                                                        "children": [
-                                                                                            {
-                                                                                                "type": "property_identifier"
-                                                                                            },
-                                                                                            {
-                                                                                                "type": "string",
-                                                                                                "Text": "\"/cart\""
-                                                                                            }
-                                                                                        ]
-                                                                                    },
-                                                                                    {
-                                                                                        "type": "jsx_attribute",
-                                                                                        "children": [
-                                                                                            {
-                                                                                                "type": "property_identifier"
-                                                                                            },
-                                                                                            {
-                                                                                                "type": "jsx_expression",
-                                                                                                "children": [
-                                                                                                    {
-                                                                                                        "type": "jsx_self_closing_element",
-                                                                                                        "children": [
-                                                                                                            {
-                                                                                                                "type": "identifier",
-                                                                                                                "Text": "Cart"
-                                                                                                            }
-                                                                                                        ]
-                                                                                                    }
-                                                                                                ]
-                                                                                            }
-                                                                                        ]
-                                                                                    }
-                                                                                ]
-                                                                            },
-                                                                            {
-                                                                                "type": "jsx_self_closing_element",
-                                                                                "children": [
-                                                                                    {
-                                                                                        "type": "identifier",
-                                                                                        "Text": "Route"
-                                                                                    },
-                                                                                    {
-                                                                                        "type": "jsx_attribute",
-                                                                                        "children": [
-                                                                                            {
-                                                                                                "type": "property_identifier"
-                                                                                            },
-                                                                                            {
-                                                                                                "type": "string",
-                                                                                                "Text": "\"/checkout\""
-                                                                                            }
-                                                                                        ]
-                                                                                    },
-                                                                                    {
-                                                                                        "type": "jsx_attribute",
-                                                                                        "children": [
-                                                                                            {
-                                                                                                "type": "property_identifier"
-                                                                                            },
-                                                                                            {
-                                                                                                "type": "jsx_expression",
-                                                                                                "children": [
-                                                                                                    {
-                                                                                                        "type": "jsx_self_closing_element",
-                                                                                                        "children": [
-                                                                                                            {
-                                                                                                                "type": "identifier",
-                                                                                                                "Text": "CheckoutPage"
-                                                                                                            }
-                                                                                                        ]
-                                                                                                    }
-                                                                                                ]
-                                                                                            }
-                                                                                        ]
-                                                                                    }
-                                                                                ]
-                                                                            },
-                                                                            {
-                                                                                "type": "jsx_closing_element",
-                                                                                "children": [
-                                                                                    {
-                                                                                        "type": "identifier",
-                                                                                        "Text": "Routes"
-                                                                                    }
-                                                                                ]
-                                                                            }
-                                                                        ]
-                                                                    },
-                                                                    {
-                                                                        "type": "jsx_closing_element",
-                                                                        "children": [
-                                                                            {
-                                                                                "type": "identifier",
-                                                                                "Text": "SearchProvider"
-                                                                            }
-                                                                        ]
-                                                                    }
-                                                                ]
-                                                            },
-                                                            {
-                                                                "type": "jsx_closing_element",
-                                                                "children": [
-                                                                    {
-                                                                        "type": "identifier",
-                                                                        "Text": "Router"
-                                                                    }
-                                                                ]
-                                                            }
-                                                        ]
-                                                    },
-                                                    {
-                                                        "type": "jsx_closing_element",
-                                                        "children": [
-                                                            {
-                                                                "type": "identifier",
-                                                                "Text": "ShopContextProvider"
-                                                            }
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                "type": "jsx_closing_element",
-                                                "children": [
-                                                    {
-                                                        "type": "identifier",
-                                                        "Text": "div"
-                                                    }
-                                                ]
-                                            }
-                                        ]
-                                    }
-                                ]
+                                "type": "identifier",
+                                "Text": "deb_file_path"
                             }
                         ]
                     }
                 ]
             },
             {
-                "type": "export_statement",
+                "type": "if_statement",
                 "children": [
                     {
-                        "type": "identifier",
-                        "Text": "App"
+                        "type": "comparison_operator",
+                        "children": [
+                            {
+                                "type": "identifier",
+                                "Text": "__name__"
+                            },
+                            {
+                                "type": "string",
+                                "Text": "\"__main__\""
+                            }
+                        ]
+                    },
+                    {
+                        "type": "block",
+                        "children": [
+                            {
+                                "type": "call",
+                                "source": {
+                                    "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                    "line": 40
+                                },
+                                "function_call": "package_executable_to_deb",
+                                "called_function": {
+                                    "type": "function_definition",
+                                    "source": {
+                                        "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                        "line": 4
+                                    },
+                                    "function_name": "package_executable_to_deb",
+                                    "param_count": 1,
+                                    "children": [
+                                        {
+                                            "type": "call",
+                                            "source": {
+                                                "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                "line": 6
+                                            },
+                                            "function_call": "os",
+                                            "is_library": true,
+                                            "arguments": {
+                                                "Text": "rust_project_path"
+                                            }
+                                        },
+                                        {
+                                            "type": "try_statement",
+                                            "children": [
+                                                {
+                                                    "type": "block",
+                                                    "children": [
+                                                        {
+                                                            "type": "call",
+                                                            "source": {
+                                                                "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                                "line": 10
+                                                            },
+                                                            "function_call": "subprocess",
+                                                            "is_library": true,
+                                                            "arguments": [
+                                                                {
+                                                                    "type": "list",
+                                                                    "children": [
+                                                                        {
+                                                                            "type": "string",
+                                                                            "Text": "\"cargo\""
+                                                                        },
+                                                                        {
+                                                                            "type": "string",
+                                                                            "Text": "\"build\""
+                                                                        },
+                                                                        {
+                                                                            "type": "string",
+                                                                            "Text": "\"--release\""
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    "type": "keyword_argument",
+                                                                    "children": [
+                                                                        {
+                                                                            "type": "identifier",
+                                                                            "Text": "check"
+                                                                        },
+                                                                        {
+                                                                            "type": "true"
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "except_clause",
+                                                    "children": [
+                                                        {
+                                                            "type": "attribute",
+                                                            "children": [
+                                                                {
+                                                                    "type": "identifier",
+                                                                    "Text": "subprocess"
+                                                                },
+                                                                {
+                                                                    "type": "identifier",
+                                                                    "Text": "CalledProcessError"
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "type": "block",
+                                                            "children": [
+                                                                {
+                                                                    "type": "call",
+                                                                    "source": {
+                                                                        "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                                        "line": 12
+                                                                    },
+                                                                    "function_call": "print",
+                                                                    "is_library": true,
+                                                                    "arguments": {
+                                                                        "Text": "\"Build failed\""
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "type": "return_statement"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "try_statement",
+                                            "children": [
+                                                {
+                                                    "type": "block",
+                                                    "children": [
+                                                        {
+                                                            "type": "call",
+                                                            "source": {
+                                                                "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                                "line": 17
+                                                            },
+                                                            "function_call": "subprocess",
+                                                            "is_library": true,
+                                                            "arguments": [
+                                                                {
+                                                                    "type": "list",
+                                                                    "children": [
+                                                                        {
+                                                                            "type": "string",
+                                                                            "Text": "\"cargo\""
+                                                                        },
+                                                                        {
+                                                                            "type": "string",
+                                                                            "Text": "\"install\""
+                                                                        },
+                                                                        {
+                                                                            "type": "string",
+                                                                            "Text": "\"cargo-deb\""
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    "type": "keyword_argument",
+                                                                    "children": [
+                                                                        {
+                                                                            "type": "identifier",
+                                                                            "Text": "check"
+                                                                        },
+                                                                        {
+                                                                            "type": "true"
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "except_clause",
+                                                    "children": [
+                                                        {
+                                                            "type": "attribute",
+                                                            "children": [
+                                                                {
+                                                                    "type": "identifier",
+                                                                    "Text": "subprocess"
+                                                                },
+                                                                {
+                                                                    "type": "identifier",
+                                                                    "Text": "CalledProcessError"
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "type": "block",
+                                                            "children": [
+                                                                {
+                                                                    "type": "call",
+                                                                    "source": {
+                                                                        "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                                        "line": 19
+                                                                    },
+                                                                    "function_call": "print",
+                                                                    "is_library": true,
+                                                                    "arguments": {
+                                                                        "Text": "\"cargo-deb installation failed\""
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "type": "return_statement"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "assignment",
+                                            "variables": {
+                                                "output_path": "subprocess.run([\"cargo\", \"deb\"], check=True, capture_output=True)"
+                                            },
+                                            "source": {
+                                                "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                "line": 24
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "identifier",
+                                                    "Text": "output_path"
+                                                },
+                                                {
+                                                    "type": "call",
+                                                    "source": {
+                                                        "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                        "line": 24
+                                                    },
+                                                    "function_call": "subprocess",
+                                                    "is_library": true,
+                                                    "arguments": [
+                                                        {
+                                                            "type": "list",
+                                                            "children": [
+                                                                {
+                                                                    "type": "string",
+                                                                    "Text": "\"cargo\""
+                                                                },
+                                                                {
+                                                                    "type": "string",
+                                                                    "Text": "\"deb\""
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "type": "keyword_argument",
+                                                            "children": [
+                                                                {
+                                                                    "type": "identifier",
+                                                                    "Text": "check"
+                                                                },
+                                                                {
+                                                                    "type": "true"
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "type": "keyword_argument",
+                                                            "children": [
+                                                                {
+                                                                    "type": "identifier",
+                                                                    "Text": "capture_output"
+                                                                },
+                                                                {
+                                                                    "type": "true"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "assignment",
+                                            "variables": {
+                                                "deb_file_path": "output_path.stdout.decode().strip().split(\"\\n\")[-1]"
+                                            },
+                                            "source": {
+                                                "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                "line": 25
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "identifier",
+                                                    "Text": "deb_file_path"
+                                                },
+                                                {
+                                                    "type": "subscript",
+                                                    "children": [
+                                                        {
+                                                            "type": "call",
+                                                            "source": {
+                                                                "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                                "line": 25
+                                                            },
+                                                            "function_call": "output_path",
+                                                            "is_library": true,
+                                                            "arguments": {
+                                                                "Text": "\"\\n\""
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "unary_operator",
+                                                            "children": [
+                                                                {
+                                                                    "type": "integer",
+                                                                    "Text": "1"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "try_statement",
+                                            "children": [
+                                                {
+                                                    "type": "block",
+                                                    "children": [
+                                                        {
+                                                            "type": "call",
+                                                            "source": {
+                                                                "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                                "line": 29
+                                                            },
+                                                            "function_call": "subprocess",
+                                                            "is_library": true,
+                                                            "arguments": [
+                                                                {
+                                                                    "type": "list",
+                                                                    "children": [
+                                                                        {
+                                                                            "type": "string",
+                                                                            "Text": "\"dpkg-deb\""
+                                                                        },
+                                                                        {
+                                                                            "type": "string",
+                                                                            "Text": "\"-I\""
+                                                                        },
+                                                                        {
+                                                                            "type": "identifier",
+                                                                            "Text": "deb_file_path"
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    "type": "keyword_argument",
+                                                                    "children": [
+                                                                        {
+                                                                            "type": "identifier",
+                                                                            "Text": "check"
+                                                                        },
+                                                                        {
+                                                                            "type": "true"
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "type": "call",
+                                                            "source": {
+                                                                "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                                "line": 30
+                                                            },
+                                                            "function_call": "print",
+                                                            "is_library": true,
+                                                            "arguments": {
+                                                                "Text": "\"Verification successful\""
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "except_clause",
+                                                    "children": [
+                                                        {
+                                                            "type": "attribute",
+                                                            "children": [
+                                                                {
+                                                                    "type": "identifier",
+                                                                    "Text": "subprocess"
+                                                                },
+                                                                {
+                                                                    "type": "identifier",
+                                                                    "Text": "CalledProcessError"
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "type": "block",
+                                                            "children": [
+                                                                {
+                                                                    "type": "call",
+                                                                    "source": {
+                                                                        "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                                        "line": 32
+                                                                    },
+                                                                    "function_call": "print",
+                                                                    "is_library": true,
+                                                                    "arguments": {
+                                                                        "Text": "\"Verification failed\""
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "type": "return_statement"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "call",
+                                            "source": {
+                                                "file": "/home/zane/Desktop/projects/Clearch/packager.py",
+                                                "line": 35
+                                            },
+                                            "function_call": "print",
+                                            "is_library": true,
+                                            "arguments": [
+                                                {
+                                                    "type": "string",
+                                                    "Text": "\"Deb file path: \""
+                                                },
+                                                {
+                                                    "type": "identifier",
+                                                    "Text": "deb_file_path"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "return_statement",
+                                            "children": [
+                                                {
+                                                    "type": "identifier",
+                                                    "Text": "deb_file_path"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "id": "/home/zane/Desktop/projects/Clearch/packager.py:package_executable_to_deb:1"
+                                },
+                                "arguments": [
+                                    {
+                                        "type": "attribute",
+                                        "children": [
+                                            {
+                                                "type": "identifier",
+                                                "Text": "os"
+                                            },
+                                            {
+                                                "type": "identifier",
+                                                "Text": "curdir"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "vulnerabilities": [
+                                    "Potential command injection, code injection, or deserialization vulnerability: package_executable_to_deb"
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
         ]
     },
     "modules_used": [
-        "./App.css",
-        "./components/navbar",
-        "./components/search",
-        "./context/context",
-        "./pages/cart",
-        "./pages/checkout",
-        "./pages/shop",
-        "BrowserRouter",
-        "Cart",
-        "CheckoutPage",
-        "Navbar",
-        "Route",
-        "Routes",
-        "SearchProvider",
-        "Shop",
-        "ShopContextProvider",
-        "react",
-        "react-router-dom"
+        "os",
+        "subprocess"
     ],
     "referenced_files": [
-        "/app/backend/sample_project/motion/src/App.js"
+        "/home/zane/Desktop/projects/Clearch/packager.py"
     ]
 }

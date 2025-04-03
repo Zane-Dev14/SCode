@@ -98,8 +98,8 @@ class PythonManager {
     
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Timeout waiting for Python server to start after 100 seconds'));
-            }, 100000); // 100 seconds
+                reject(new Error('Timeout waiting for Python server to start after 10 seconds'));
+            }, 10000); // Reduced to 10 seconds
             
             try {
                 console.log(`Starting Python server with: ${pythonPath} api.py`);
@@ -114,7 +114,17 @@ class PythonManager {
                 this.pythonProcess.stdout.on('data', (data) => {
                     const output = data.toString();
                     console.log(`Python stdout: ${output}`);
-                    if (output.includes('Running on')) {
+                    // Split output into lines and check each for "Running on"
+                    const lines = output.split('\n');
+                    for (const line of lines) {
+                        if (line.includes('Running on')) {
+                            clearTimeout(timeout);
+                            resolve();
+                            return;
+                        }
+                    }
+                    // Fallback: if we see Flask startup messages, assume it's running
+                    if (output.includes('Serving Flask app') || output.includes('Debug mode')) {
                         clearTimeout(timeout);
                         resolve();
                     }
@@ -123,7 +133,6 @@ class PythonManager {
                 this.pythonProcess.stderr.on('data', (data) => {
                     const errorOutput = data.toString();
                     console.error(`Python stderr: ${errorOutput}`);
-                    // Optionally reject early on stderr if it indicates a fatal error
                     if (errorOutput.includes('Error') || errorOutput.includes('Exception')) {
                         clearTimeout(timeout);
                         reject(new Error(`Python server error: ${errorOutput}`));
@@ -152,6 +161,7 @@ class PythonManager {
             }
         });
     }
+    
     
 
     stopPythonServer() {

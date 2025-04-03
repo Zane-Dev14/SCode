@@ -33,9 +33,9 @@ def get_all_source_files(root_dir):
                 source_files.append(os.path.join(root, file))
     return source_files
 
-if __name__ == '__main__':
-    project_dir = '/app/backend/test_project'  # Example path
-    files = get_all_source_files(project_dir)
-    for file in files:
-        lang = detect_language(file)
-        print(f"Detected {lang} → {file}")
+# if __name__ == '__main__':
+#     project_dir = '/app/backend/test_project'  # Example path
+#     files = get_all_source_files(project_dir)
+#     for file in files:
+#         lang = detect_language(file)
+#         print(f"Detected {lang} → {file}")

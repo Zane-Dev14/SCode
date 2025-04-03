@@ -21,31 +21,31 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLoadingMessage(message.message);
         break;
         
-      case 'analyze':
-        // Request backend to analyze the project
-        projectDir = message.projectDir;
-        updateLoadingMessage('Analyzing project...');
-        
-        fetch(`http://localhost:5000/analyze`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project_dir: projectDir })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.error) {
-            showError(data.error);
-          } else if (data.status === 'needs_entrypoint') {
-            // Show entry point selection
-            showEntrypointSelector(data.options, projectDir);
-          } else {
-            astData = data.data;
-            transitionToView('ast');
-          }
-        })
-        .catch(error => showError(`Failed to analyze: ${error.message}`));
-        break;
-        
+        case 'analyze':
+          projectDir = message.projectDir;
+          console.log(`Received projectDir for analysis: ${projectDir}`);
+          updateLoadingMessage('Analyzing project...');
+          
+          fetch(`http://localhost:5000/analyze`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ project_dir: projectDir })
+          })
+          .then(response => response.json())
+          .then(data => {
+              console.log('Received analysis data:', data); // Log the response
+              if (data.error) {
+                  showError(data.error);
+              } else if (data.status === 'needs_entrypoint') {
+                  showEntrypointSelector(data.options, projectDir);
+              } else {
+                  astData = data.data;
+                  transitionToView('ast');
+              }
+          })
+          .catch(error => showError(`Failed to analyze: ${error.message}`));
+          break;
+          
       case 'astData':
         // If we receive AST data directly
         console.log('Received AST data');

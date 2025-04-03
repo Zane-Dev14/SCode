@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import vertexShader from '../shaders/background.vert';
 import fragmentShader from '../shaders/background.frag';
+// Import Postprocessing
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 export function initShaderBackground(container) {
     // Create scene
@@ -15,6 +19,18 @@ export function initShaderBackground(container) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
+
+    // --- Postprocessing --- 
+    const renderScene = new RenderPass(scene, camera);
+    const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.8, // Lower strength for background bloom
+        0.4, // Wider radius
+        0.7  // Higher threshold (bloom brighter parts)
+    );
+    const composer = new EffectComposer(renderer);
+    composer.addPass(renderScene);
+    composer.addPass(bloomPass);
 
     // Uniforms including mouse position
     const uniforms = {
@@ -45,7 +61,9 @@ export function initShaderBackground(container) {
     // Handle resize
     const resizeListener = () => {
         renderer.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight); // Resize composer
         uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+        bloomPass.resolution.set(window.innerWidth, window.innerHeight); // Update bloom pass resolution
     };
     window.addEventListener('resize', resizeListener);
 
@@ -54,7 +72,7 @@ export function initShaderBackground(container) {
     function animate() {
         animationFrameId = requestAnimationFrame(animate);
         uniforms.time.value += 0.01;
-        renderer.render(scene, camera);
+        composer.render(); // Use composer
     }
 
     // Return cleanup function
@@ -62,15 +80,20 @@ export function initShaderBackground(container) {
         cancelAnimationFrame(animationFrameId);
         window.removeEventListener('mousemove', mouseListener);
         window.removeEventListener('resize', resizeListener);
+        if (container && renderer.domElement) {
+            try { container.removeChild(renderer.domElement); } catch (e) { /* Ignore */ }
+        }
         renderer.dispose();
-        container.removeChild(renderer.domElement);
+        composer.dispose(); // Dispose composer resources
+        // Dispose other scene resources if needed
     };
 
     return {
         scene,
         camera,
-        renderer,
-        animate, // Expose animate to be started by the caller
+        renderer, // Still needed for particle system access
+        composer, // Expose composer if needed
+        animate,
         cleanup
     };
 } 

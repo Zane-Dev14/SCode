@@ -52,33 +52,60 @@ float snoise(vec3 v) {
   return 42.0 * dot(m, px);
 }
 
+// FBM function
+float fbm(vec3 p) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < 4; i++) { // Even fewer octaves for optimization
+        value += amplitude * snoise(p);
+        p *= 2.0;
+        amplitude *= 0.5;
+    }
+    return value;
+}
+
 void main() {
     vec2 uv = vUv;
-    vec2 p = uv * 2.0 - 1.0;
-    p.x *= resolution.x / resolution.y;
-
-    float noiseScale = 3.0; // Adjust for finer/coarser noise
-    float timeEffect = time * 0.2;
-    float mouseEffect = length(p - (mouse * 2.0 - 1.0)) * 0.5;
-
-    // Use simplex noise for a more organic look
-    float n = snoise(vec3(p * noiseScale + mouse.x * 0.5, timeEffect + mouseEffect));
-    n = (n + 1.0) * 0.5; // Map noise to 0.0 - 1.0
-
-    // Color based on noise and time
-    vec3 color1 = vec3(0.1, 0.2, 0.4); // Deep blue
-    vec3 color2 = vec3(0.3, 0.5, 0.8); // Lighter blue
-    vec3 color3 = vec3(0.8, 0.9, 1.0); // Highlight
-
-    vec3 finalColor = mix(color1, color2, smoothstep(0.3, 0.6, n));
-    finalColor = mix(finalColor, color3, smoothstep(0.7, 0.8, n));
+    vec2 p = uv * 2.0 - 1.0; // -1 to 1 range
+    p.x *= resolution.x / resolution.y; // Aspect ratio correction
     
-    // Add subtle vignette
-    float vignette = smoothstep(0.8, 0.4, length(p));
-    finalColor *= vignette;
+    // Mouse interaction - shift the coordinate space
+    vec2 mouseShift = (mouse - 0.5) * 0.5;
+    p += mouseShift;
+
+    float timeScaled = time * 0.1;
+
+    // Layer 1: Slow moving large scale FBM for base nebula/cloud
+    float fbm1 = fbm(vec3(p * 0.5, timeScaled * 0.5));
+    fbm1 = (fbm1 + 1.0) * 0.5;
+
+    // Layer 2: Faster moving smaller scale FBM for details
+    float fbm2 = fbm(vec3(p * 1.5 + vec2(timeScaled * 0.8, -timeScaled * 0.6), timeScaled));
+    fbm2 = (fbm2 + 1.0) * 0.5;
+
+    // Color palette for space nebula
+    vec3 color1 = vec3(0.05, 0.05, 0.1);  // Deep dark blue/purple
+    vec3 color2 = vec3(0.1, 0.2, 0.4);   // Mid blue
+    vec3 color3 = vec3(0.5, 0.3, 0.6);   // Magenta/Purple highlights
+    vec3 color4 = vec3(0.8, 0.9, 1.0);   // Bright highlights (stars?)
+
+    // Combine layers and map to colors
+    float mixFactor1 = smoothstep(0.3, 0.6, fbm1);
+    vec3 finalColor = mix(color1, color2, mixFactor1);
+    
+    float mixFactor2 = smoothstep(0.5, 0.8, fbm2);
+    finalColor = mix(finalColor, color3, mixFactor2 * 0.6); // Mix in purple based on detail noise
+
+    // Add subtle bright spots (stars)
+    float stars = smoothstep(0.85, 0.9, fbm2 * pow(fbm1, 2.0));
+    finalColor = mix(finalColor, color4, stars * 0.5);
+
+    // Vignette effect
+    float vignette = 1.0 - length(uv - 0.5) * 1.2;
+    finalColor *= smoothstep(0.0, 0.8, vignette);
 
     // Fade in effect
-    float fadeIn = smoothstep(0.0, 2.0, time);
+    float fadeIn = smoothstep(0.0, 1.5, time); // Slightly slower fade in
     finalColor *= fadeIn;
 
     gl_FragColor = vec4(finalColor, 1.0);

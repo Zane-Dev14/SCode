@@ -1,11 +1,13 @@
 // main.js
-// Get the VS Code API
+// Get the VS Code API (already acquired in HTML)
+// const vscode = acquireVsCodeApi(); // REMOVE THIS LINE
 // State
 let astData = null;
 let currentView = 'loading';
 let selectedNode = null;
 let projectDir = null;
 let loadingMessage = 'Initializing...';
+let fetchAbortController = null;
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,34 +23,71 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLoadingMessage(message.message);
         break;
         
-        case 'analyze':
-          projectDir = message.projectDir;
-          console.log(`Received projectDir for analysis: ${projectDir}`);
-          updateLoadingMessage('Analyzing project...');
-          
-          fetch(`http://localhost:5000/analyze`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ project_dir: projectDir })
-          })
-          .then(response => response.json())
-          .then(data => {
-              console.log('Received analysis data:', data); // Log the response
-              if (data.error) {
-                  showError(data.error);
-              } else if (data.status === 'needs_entrypoint') {
-                  showEntrypointSelector(data.options, projectDir);
-              } else {
-                  astData = data.data;
-                  transitionToView('ast');
-              }
-          })
-          .catch(error => showError(`Failed to analyze: ${error.message}`));
-          break;
+      case 'analyze':
+        // Cancel any existing request
+        if (fetchAbortController) {
+          fetchAbortController.abort();
+        }
+        fetchAbortController = new AbortController();
+        
+        projectDir = message.projectDir;
+        console.log(`Received projectDir for analysis: ${projectDir}`);
+        updateLoadingMessage('Analyzing project...');
+        
+        fetch(`http://localhost:5000/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project_dir: projectDir }),
+            signal: fetchAbortController.signal
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Received analysis data:', data); // Log the response
+            if (data.error) {
+                showError(data.error);
+            } else if (data.status === 'needs_entrypoint') {
+                showEntrypointSelector(data.options, projectDir);
+            } else {
+                astData = data.data;
+                transitionToView('ast');
+            }
+        })
+        .catch(error => {
+            // Don't show aborted fetch errors (happens when we cancel deliberately)
+            if (error.name === 'AbortError') {
+                console.log('Fetch aborted');
+                return;
+            }
+            showError(`Failed to analyze: ${error.message}`);
+            
+            // Retry with direct AST request as fallback
+            console.log('Trying to fetch AST directly as fallback');
+            setTimeout(() => {
+                window.vscode.postMessage({ command: 'requestAst' });
+            }, 1000);
+        });
+        break;
           
       case 'astData':
         // If we receive AST data directly
         console.log('Received AST data');
+        // Cancel any existing request
+        if (fetchAbortController) {
+          fetchAbortController.abort();
+          fetchAbortController = null;
+        }
+        
+        // Clear timeout for AST request
+        if (window.astRequestTimeout) {
+          clearTimeout(window.astRequestTimeout);
+          window.astRequestTimeout = null;
+        }
+        
         astData = message.data;
         transitionToView('ast');
         break;
@@ -59,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-
+    
 function initApp() {
   const root = document.getElementById('root');
   
@@ -175,6 +214,14 @@ function updateLoadingMessage(message) {
   if (msgElement) {
     msgElement.textContent = message;
   }
+  
+  // If we've been waiting for analysis for more than 15 seconds, try to request AST data directly
+  if (message.includes('Analyzing') && !window.astRequestTimeout) {
+    window.astRequestTimeout = setTimeout(() => {
+      console.log('Analysis taking too long, requesting AST data directly');
+      window.vscode.postMessage({ command: 'requestAst' });
+    }, 15000);
+  }
 }
 
 function showEntrypointSelector(files, projectDir) {
@@ -205,8 +252,8 @@ function showEntrypointSelector(files, projectDir) {
       });
       fileItem.classList.add('selected');
       
-      // Send message to extension
-      window.postMessage({
+      // Send message to extension using vscode API
+      window.vscode.postMessage({
         command: 'selectEntrypoint',
         projectDir: projectDir,
         entrypoint: file.path
@@ -238,7 +285,7 @@ function transitionToView(view) {
       // Now switch to the requested view
       switchView(view);
     }, 500);
-  } else {
+        } else {
     // Just switch views directly
     switchView(view);
   }

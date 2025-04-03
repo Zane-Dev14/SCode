@@ -49,3 +49,71 @@ simulation.nodes(root.descendants()).on("tick", () => {
   link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
   node.attr("cx", d => d.x).attr("cy", d => d.y);
 });
+
+new
+
+
+# Visualization Implementation Plan
+
+## Core Technologies
+- Three.js - 3D rendering, scene management
+- React Three Fiber - React bindings for Three.js
+- D3.js - Data binding, force simulations
+- GSAP - Advanced animations
+- React - Component-based UI
+- Shaders - GLSL custom effects, particles
+
+## Loading Screen
+- Particle system with code symbols floating in 3D space
+- Animated progress indicator with gradient glow
+- Dynamic text transitions showing analysis steps
+- Background with animated shader gradient (noise-based)
+- Pulsing light effects around loading indicators
+
+## Main Visualization Components
+- 3D force-directed graph for code structure
+- Node types: functions, modules, variables, vulnerabilities
+- Edge types: calls, dataflow, dependencies
+- Color coding based on type/importance/vulnerabilities
+- Interactive hovering effects with glow/pulse
+- Custom shader for nodes/edges highlighting
+
+## Interaction Features
+- Orbit controls for camera movement
+- Zoom to specific nodes/clusters
+- Pan across visualization
+- Click to expand/collapse function nodes
+- Search/filter functionality
+- Focus mode on selected components
+- Timeline scrubber for code execution path
+
+## Advanced Visual Effects
+- Bloom/glow effects on important nodes
+- Particle effects along dataflow paths
+- Ambient occlusion for depth perception
+- Animated transitions between views
+- Custom node geometries based on type
+- Dynamic edge thickness based on importance
+
+## Implementation Steps
+1. Convert React components to use React Three Fiber
+2. Create custom shaders for nodes/links/background
+3. Implement force-directed layout using D3 + Three.js
+4. Add interactivity handlers for nodes/camera
+5. Build shader-based loading screen with particle effects
+6. Create responsive layout supporting different view modes
+7. Add animations for transitions, expansions, highlighting
+8. Implement backend path handling for entrypoint files
+
+## Libraries
+- three.js, @react-three/fiber, @react-three/drei, @react-three/postprocessing
+- d3-force-3d, d3-hierarchy
+- gsap, framer-motion
+- react, react-dom
+- custom GLSL shaders
+
+## Performance Optimizations
+- Instanced mesh rendering for similar nodes
+- Level-of-detail rendering based on distance
+- Worker thread for force calculations
+- WebGL2 for advanced rendering features

@@ -7,13 +7,20 @@ class PythonManager {
     constructor() {
         this.pythonProcess = null;
         this.serverPort = 5000;
+        this.maxRetries = 3;
     }
 
     async setupPythonEnvironment(extensionPath) {
         const backendPath = path.join(extensionPath, 'backend');
         const venvPath = path.join(backendPath, '.venv');
+        const outputDir = path.join(backendPath, 'output');
         
         try {
+            // Ensure output directory exists
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+            
             // Directly use system Python 
             const pythonPath = this.findPythonSync();
             if (!pythonPath) {
@@ -33,11 +40,37 @@ class PythonManager {
                 vscode.window.showInformationMessage('Using existing virtual environment.');
             }
             
-            // Start the Python server
-            await this.startPythonServer(venvPath, backendPath);
-            vscode.window.showInformationMessage('Python server started successfully.');
+            // Start the Python server with retries
+            let retries = 0;
+            let lastError = null;
             
-            return true;
+            while (retries < this.maxRetries) {
+                try {
+                    await this.startPythonServer(venvPath, backendPath);
+                    vscode.window.showInformationMessage('Python server started successfully.');
+                    return true;
+                } catch (error) {
+                    lastError = error;
+                    console.error(`Failed to start Python server (attempt ${retries + 1}): ${error.message}`);
+                    
+                    // Kill any lingering process before retry
+                    if (this.pythonProcess) {
+                        this.pythonProcess.kill();
+                        this.pythonProcess = null;
+                    }
+                    
+                    // If it's the last retry, don't wait
+                    if (retries < this.maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                    
+                    retries++;
+                }
+            }
+            
+            // If we got here, all retries failed
+            throw lastError || new Error('Failed to start Python server after multiple attempts');
+            
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to setup Python: ${error.message}`);
             console.error(error);
@@ -49,21 +82,30 @@ class PythonManager {
         try {
             // First try python3
             try {
-                execSync('python3 --version');
+                const python3Version = execSync('python3 --version', { encoding: 'utf8' });
+                console.log(`Found Python3: ${python3Version.trim()}`);
                 return 'python3';
             } catch (e) {
+                console.log('python3 command not found, trying python');
                 // If python3 fails, try python
-                execSync('python --version');
+                const pythonVersion = execSync('python --version', { encoding: 'utf8' });
+                console.log(`Found Python: ${pythonVersion.trim()}`);
                 return 'python';
             }
         } catch (error) {
+            console.error('No Python installation found:', error.message);
             return null;
         }
     }
 
     createVirtualEnvSync(pythonPath, backendPath) {
         try {
-            execSync(`${pythonPath} -m venv .venv`, { cwd: backendPath });
+            console.log(`Creating virtual environment with ${pythonPath} in ${backendPath}`);
+            const result = execSync(`${pythonPath} -m venv .venv`, { 
+                cwd: backendPath,
+                encoding: 'utf8' 
+            });
+            console.log('Virtual environment created:', result);
         } catch (error) {
             console.error('Failed to create virtual environment:', error);
             throw new Error(`Failed to create virtual environment: ${error.message}`);
@@ -78,7 +120,12 @@ class PythonManager {
         );
 
         try {
-            execSync(`"${pipPath}" install -r requirements.txt`, { cwd: backendPath });
+            console.log(`Installing dependencies with ${pipPath} in ${backendPath}`);
+            const result = execSync(`"${pipPath}" install -r requirements.txt`, { 
+                cwd: backendPath,
+                encoding: 'utf8' 
+            });
+            console.log('Dependencies installed:', result);
         } catch (error) {
             console.error('Failed to install dependencies:', error);
             throw new Error(`Failed to install dependencies: ${error.message}`);
@@ -93,22 +140,82 @@ class PythonManager {
         );
     
         if (this.pythonProcess) {
-            this.pythonProcess.kill();
+            console.log('Stopping existing Python process');
+            try {
+                this.pythonProcess.kill();
+            } catch (err) {
+                console.log(`Error stopping Python process: ${err.message}`);
+            }
+            this.pythonProcess = null;
+            // Small delay to ensure port is released
+            await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+
+        // Check if something is already using port 5000
+        try {
+            console.log(`Checking if port ${this.serverPort} is available...`);
+            if (process.platform === 'win32') {
+                const netstat = execSync(`netstat -ano | findstr :${this.serverPort} || echo "Port available"`, { encoding: 'utf8' });
+                if (!netstat.includes("Port available")) {
+                    console.log(`Process already using port ${this.serverPort}:`, netstat);
+                    console.log('Will try to continue anyway, but this may cause issues.');
+                }
+            } else {
+                const netstat = execSync(`lsof -i :${this.serverPort} || echo "Port available"`, { encoding: 'utf8' });
+                if (!netstat.includes("Port available")) {
+                    console.log(`Process already using port ${this.serverPort}:`, netstat);
+                    console.log('Will try to continue anyway, but this may cause issues.');
+                }
+            }
+        } catch (error) {
+            console.log(`Error checking port: ${error.message} - will try to start server anyway`);
         }
     
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Timeout waiting for Python server to start after 10 seconds'));
-            }, 10000); // Reduced to 10 seconds
+                if (this.pythonProcess) {
+                    try {
+                        this.pythonProcess.kill();
+                    } catch (err) {
+                        console.log(`Error stopping timed out Python process: ${err.message}`);
+                    }
+                    this.pythonProcess = null;
+                }
+                reject(new Error('Timeout waiting for Python server to start after 15 seconds'));
+            }, 15000);
             
             try {
                 console.log(`Starting Python server with: ${pythonPath} api.py`);
                 console.log(`CWD: ${backendPath}`);
                 console.log(`Port: ${this.serverPort}`);
+
+                // Ensure the Python path exists
+                if (!fs.existsSync(pythonPath)) {
+                    clearTimeout(timeout);
+                    reject(new Error(`Python interpreter not found at: ${pythonPath}`));
+                    return;
+                }
+                
+                // Ensure the api.py file exists
+                const apiPath = path.join(backendPath, 'api.py');
+                if (!fs.existsSync(apiPath)) {
+                    clearTimeout(timeout);
+                    reject(new Error(`API file not found at: ${apiPath}`));
+                    return;
+                }
     
+                // Set up environment with explicit Flask variables
+                const env = { 
+                    ...process.env, 
+                    PORT: this.serverPort.toString(), 
+                    FLASK_APP: 'api.py',
+                    FLASK_ENV: 'development',
+                    PYTHONUNBUFFERED: '1'  // Ensures Python output is unbuffered
+                };
+                
                 this.pythonProcess = spawn(pythonPath, ['api.py'], {
                     cwd: backendPath,
-                    env: { ...process.env, PORT: this.serverPort.toString() }
+                    env: env
                 });
     
                 this.pythonProcess.stdout.on('data', (data) => {
@@ -119,21 +226,25 @@ class PythonManager {
                     for (const line of lines) {
                         if (line.includes('Running on')) {
                             clearTimeout(timeout);
-                            resolve();
+                            // Wait a brief moment to ensure the server is fully up
+                            setTimeout(() => resolve(), 1000);
                             return;
                         }
                     }
                     // Fallback: if we see Flask startup messages, assume it's running
                     if (output.includes('Serving Flask app') || output.includes('Debug mode')) {
                         clearTimeout(timeout);
-                        resolve();
+                        // Wait a brief moment to ensure the server is fully up
+                        setTimeout(() => resolve(), 1500);
                     }
                 });
     
                 this.pythonProcess.stderr.on('data', (data) => {
                     const errorOutput = data.toString();
                     console.error(`Python stderr: ${errorOutput}`);
-                    if (errorOutput.includes('Error') || errorOutput.includes('Exception')) {
+                    // Only reject if it's a real error, not just Flask debug output
+                    if (errorOutput.includes('Error') || errorOutput.includes('Exception') || 
+                        errorOutput.includes('Traceback')) {
                         clearTimeout(timeout);
                         reject(new Error(`Python server error: ${errorOutput}`));
                     }
@@ -147,9 +258,14 @@ class PythonManager {
     
                 this.pythonProcess.on('exit', (code, signal) => {
                     clearTimeout(timeout);
-                    if (code !== 0) {
+                    if (code !== 0 && code !== null) {
                         console.error(`Python process exited with code ${code}, signal ${signal}`);
                         reject(new Error(`Python server exited with code ${code}`));
+                    } else if (signal) {
+                        console.log(`Python process was terminated by signal ${signal}`);
+                        if (signal !== 'SIGTERM') {
+                            reject(new Error(`Python server was terminated by signal ${signal}`));
+                        }
                     } else {
                         console.log('Python process exited normally');
                     }
@@ -162,10 +278,9 @@ class PythonManager {
         });
     }
     
-    
-
     stopPythonServer() {
         if (this.pythonProcess) {
+            console.log('Stopping Python server');
             this.pythonProcess.kill();
             this.pythonProcess = null;
         }

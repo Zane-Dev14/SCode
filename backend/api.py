@@ -5,6 +5,7 @@ import json
 import sys
 # from analyzer import analyze_project
 from ast_generator import generate_project_asts
+from language_detector import find_entrypoint
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -19,11 +20,9 @@ def analyze():
     """Analyze a project"""
     data = request.json
     project_dir = data.get('project_dir')
-    entrypoint = data.get('entrypoint')
     
     # Log incoming data
     print(f"Received project_dir: {project_dir}")
-    print(f"Received entrypoint: {entrypoint}")
     
     # Validate project_dir
     if not project_dir:
@@ -54,47 +53,18 @@ def analyze():
         return jsonify({"error": f"Error accessing directory: {str(e)}"}), 500
     
     try:
-        # Find a suitable entrypoint if not provided
-        if not entrypoint:
-            print("No entrypoint provided, searching for one...")
-            common_entrypoints = ['index.js', 'app.js', 'main.js', 'main.py', 'app.py', 'main.rs']
-            for entry in common_entrypoints:
-                potential_path = os.path.join(abs_project_dir, entry)
-                if os.path.isfile(potential_path):  # Use isfile to ensure it’s a file
-                    entrypoint = entry
-                    print(f"Found common entrypoint: {entrypoint}")
-                    break
-            
-            # If no common entrypoint, find the first supported file
-            if not entrypoint:
-                for root, _, files in os.walk(abs_project_dir):
-                    for file in files:
-                        if file.endswith(('.js', '.ts', '.jsx', '.tsx', '.py', '.rs')):
-                            entrypoint = os.path.relpath(os.path.join(root, file), abs_project_dir)
-                            print(f"Selected first suitable file as entrypoint: {entrypoint}")
-                            break
-                    if entrypoint:
-                        break
-        
-        # Validate entrypoint
+        # Find the entrypoint automatically
+        print("Searching for entrypoint...")
+        entrypoint = find_entrypoint(abs_project_dir)
         if not entrypoint:
             print("No suitable entrypoint found")
-            possible_entrypoints = find_possible_entrypoints(abs_project_dir)
             return jsonify({
-                "status": "needs_entrypoint",
-                "message": "Please select an entry point file",
-                "options": possible_entrypoints
-            }), 200
+                "status": "error",
+                "message": "No suitable entrypoint found in the project",
+            }), 400
         
         full_entrypoint_path = os.path.join(abs_project_dir, entrypoint)
-        if not os.path.isfile(full_entrypoint_path):
-            print(f"Entrypoint does not exist or is not a file: {full_entrypoint_path}")
-            possible_entrypoints = find_possible_entrypoints(abs_project_dir)
-            return jsonify({
-                "status": "needs_entrypoint",
-                "message": f"Entrypoint {entrypoint} not found",
-                "options": possible_entrypoints
-            }), 200
+        print(f"Selected entrypoint: {entrypoint}")
         
         # Generate AST
         print(f"Generating AST for {abs_project_dir} with entrypoint {entrypoint}")
@@ -122,7 +92,7 @@ def analyze():
             "message": error_msg,
             "error": str(e)
         }), 500
-    
+            
 
 @app.route('/ast', methods=['GET'])
 def get_ast():

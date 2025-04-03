@@ -114,50 +114,40 @@ function showVisualization(analysis, context) {
 
 async function analyzeProject(panel) {
   try {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-      throw new Error('No active editor found');
-    }
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
       throw new Error('No workspace folder is open');
     }
 
     const rootPath = workspaceFolders[0].uri.fsPath;
-
-    // Send progress updates
-    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 10 });
-    const result = await runAnalysis(rootPath, panel);
-    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 100 });
-    return result;
+    return await runAnalysis(rootPath, panel);
   } catch (error) {
-    vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
     throw error;
   }
 }
 
 async function runAnalysis(rootPath, panel) {
   try {
-    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 20 });
     const response = await fetch('http://localhost:5000/analyze', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        project_dir: rootPath,
-      }),
+      body: JSON.stringify({ project_dir: rootPath })
     });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 80 });
     const data = await response.json();
+    panel.webview.postMessage({ 
+      type: 'fromExtension', 
+      command: 'updateProgress', 
+      progress: 100 
+    });
     return data;
   } catch (error) {
-    console.error('Error fetching analysis:', error);
     throw error;
   }
 }

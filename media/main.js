@@ -2,62 +2,89 @@
 // Entry point for the React application
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from './components/App';
+import App from './components/App.jsx';
 
-// Initialize the React app
+// Initialize React app
 document.addEventListener('DOMContentLoaded', () => {
-  const root = document.getElementById('root');
-  ReactDOM.render(<App />, root);
+    try {
+        const root = document.getElementById('root');
+        if (!root) {
+            throw new Error('Root element not found');
+        }
+        
+        // Initialize React app
+        const app = React.createElement(React.StrictMode, null,
+            React.createElement(App, { initialData: window.analysisData || {} })
+        );
+        
+        ReactDOM.render(app, root);
+        
+        // Load shaders after React is initialized
+        loadShaders().catch(error => {
+            console.error('Failed to load shaders:', error);
+            vscode.postMessage({
+                command: 'error',
+                message: `Failed to load shaders: ${error.message}`
+  });
+});
+    } catch (error) {
+        console.error('Failed to initialize app:', error);
+        vscode.postMessage({
+            command: 'error',
+            message: `Failed to initialize app: ${error.message}`
+        });
+    }
 });
 
-// Include shader scripts in the HTML
-function addShaderScripts() {
-  const shaders = [
-    { id: 'node-vertex-shader', type: 'x-shader/x-vertex', src: 'shaders/nodeVertex.glsl' },
-    { id: 'node-fragment-shader', type: 'x-shader/x-fragment', src: 'shaders/nodeFragment.glsl' },
-    { id: 'edge-vertex-shader', type: 'x-shader/x-vertex', src: 'shaders/edgeVertex.glsl' },
-    { id: 'edge-fragment-shader', type: 'x-shader/x-fragment', src: 'shaders/edgeFragment.glsl' },
-    { id: 'background-vertex-shader', type: 'x-shader/x-vertex', src: 'shaders/backgroundVertex.glsl' },
-    { id: 'background-fragment-shader', type: 'x-shader/x-fragment', src: 'shaders/backgroundFragment.glsl' },
-    { id: 'particle-vertex-shader', type: 'x-shader/x-vertex', src: 'shaders/particleVertex.glsl' },
-    { id: 'particle-fragment-shader', type: 'x-shader/x-fragment', src: 'shaders/particleFragment.glsl' }
-  ];
+// Shader definitions
+const shaders = [
+    { id: 'fbmShader', type: 'x-shader/x-fragment', path: 'shaders/fbm.glsl' },
+    { id: 'backgroundVertexShader', type: 'x-shader/x-vertex', path: 'shaders/backgroundVertex.glsl' },
+    { id: 'backgroundFragmentShader', type: 'x-shader/x-fragment', path: 'shaders/backgroundFragment.glsl' },
+    { id: 'nodeVertexShader', type: 'x-shader/x-vertex', path: 'shaders/nodeVertex.glsl' },
+    { id: 'nodeFragmentShader', type: 'x-shader/x-fragment', path: 'shaders/nodeFragment.glsl' },
+    { id: 'edgeVertexShader', type: 'x-shader/x-vertex', path: 'shaders/edgeVertex.glsl' },
+    { id: 'edgeFragmentShader', type: 'x-shader/x-fragment', path: 'shaders/edgeFragment.glsl' },
+    { id: 'particleVertexShader', type: 'x-shader/x-vertex', path: 'shaders/particleVertex.glsl' },
+    { id: 'particleFragmentShader', type: 'x-shader/x-fragment', path: 'shaders/particleFragment.glsl' }
+];
 
-  // Helper function to fetch shader code
-  const fetchShader = async (src) => {
+// Fetch shader content
+async function fetchShader(path) {
     try {
-      const response = await fetch(src);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch shader: ${response.statusText}`);
-      }
-      return await response.text();
+        const fullPath = `${window.shadersPath}/${path}`;
+        const response = await fetch(fullPath);
+        if (!response.ok) {
+            throw new Error(`Failed to load shader: ${response.statusText}`);
+        }
+        return await response.text();
     } catch (error) {
-      console.error(`Error loading shader from ${src}:`, error);
-      return `// Error loading shader: ${error.message}`;
+        console.error(`Error loading shader from ${path}:`, error);
+        throw error;
     }
-  };
-
-  // Create script tags for each shader
-  const loadShaders = async () => {
-    for (const shader of shaders) {
-      try {
-        const shaderContent = await fetchShader(shader.src);
-        const scriptTag = document.createElement('script');
-        scriptTag.id = shader.id;
-        scriptTag.type = shader.type;
-        scriptTag.textContent = shaderContent;
-        document.head.appendChild(scriptTag);
-      } catch (error) {
-        console.error(`Failed to add shader ${shader.id}:`, error);
-      }
-    }
-  };
-
-  // Load the shaders
-  loadShaders().catch(error => {
-    console.error('Error loading shaders:', error);
-  });
 }
 
-// Call the function to add shader scripts
-addShaderScripts();
+// Load all shaders
+async function loadShaders() {
+    if (!window.shadersPath) {
+        throw new Error('Shaders path not set in webview');
+    }
+
+    const loadPromises = shaders.map(async shader => {
+        try {
+            const content = await fetchShader(shader.path);
+            const script = document.createElement('script');
+            script.id = shader.id;
+            script.type = shader.type;
+            script.textContent = content;
+            document.head.appendChild(script);
+            console.log(`Loaded shader: ${shader.id}`);
+        } catch (error) {
+            console.error(`Failed to load shader ${shader.id}:`, error);
+            throw error;
+        }
+    });
+
+    await Promise.all(loadPromises);
+    console.log('All shaders loaded successfully');
+}

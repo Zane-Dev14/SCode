@@ -1,18 +1,28 @@
+attribute vec3 position;
+attribute vec3 target;
+attribute float progress;
+attribute float thickness;
+
+uniform mat4 projectionMatrix;
+uniform mat4 modelViewMatrix;
 uniform float time;
-attribute float strength;
-varying vec3 vPosition;
-varying float vStrength;
+uniform float selectedEdge;
+
+varying float vProgress;
+varying float vThickness;
+varying float vSelected;
 
 void main() {
-    vPosition = position;
-    vStrength = strength;
+    vProgress = progress;
+    vThickness = thickness;
+    vSelected = selectedEdge;
     
-    // Calculate position with time-based animation
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    // Calculate position along the edge
+    vec3 pos = mix(position, target, progress);
     
-    // Apply a subtle wave effect to edges
-    float wave = sin(position.x * 5.0 + time) * 0.02 * strength;
-    mvPosition.y += wave;
+    // Add some wave motion
+    float wave = sin(time * 2.0 + progress * 10.0) * 0.1;
+    pos += vec3(wave, wave, 0.0);
     
-    gl_Position = projectionMatrix * mvPosition;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 } 

@@ -1,24 +1,25 @@
+precision highp float;
+
 uniform vec3 color;
 uniform float time;
-varying vec3 vPosition;
-varying float vStrength;
+uniform float selectedEdge;
+
+varying float vProgress;
+varying float vThickness;
+varying float vSelected;
 
 void main() {
-    // Animate color along the edge
-    float pulse = sin(time * 3.0 + vPosition.x * 10.0) * 0.5 + 0.5;
-    
     // Create a glowing effect
-    vec3 glowColor = color * (0.8 + 0.2 * pulse);
+    float glow = sin(vProgress * 20.0 - time * 2.0) * 0.5 + 0.5;
     
-    // Make stronger connections more visible
-    float alpha = 0.3 + 0.7 * vStrength * (0.8 + 0.2 * pulse);
+    // Calculate edge color with selection highlight
+    vec3 edgeColor = mix(color, vec3(1.0), vSelected * 0.5);
     
-    // Add a flowing effect for data flow
-    float flow = fract(vPosition.x * 0.1 - time * 0.5);
-    float flowIntensity = smoothstep(0.9, 1.0, flow) * 0.6 * vStrength;
+    // Add thickness-based alpha
+    float alpha = vThickness * (0.5 + glow * 0.5);
     
-    // Add the flow effect to the final color
-    glowColor += vec3(1.0, 1.0, 1.0) * flowIntensity;
+    // Add selection glow
+    alpha += vSelected * 0.3;
     
-    gl_FragColor = vec4(glowColor, alpha);
+    gl_FragColor = vec4(edgeColor, alpha);
 } 

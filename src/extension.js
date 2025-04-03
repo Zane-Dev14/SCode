@@ -372,7 +372,11 @@ class CodeAnalyzer {
         const mainCssUri = this.panel.webview.asWebviewUri(
             vscode.Uri.file(path.join(this.extensionPath, 'media', 'main.css'))
         );
-    
+
+        // Get paths to shader files
+        const shaderBasePath = vscode.Uri.file(path.join(this.extensionPath, 'media', 'shaders'));
+        const shadersPath = this.panel.webview.asWebviewUri(shaderBasePath);
+
         return `<!DOCTYPE html>
         <html lang="en">
         <head>
@@ -405,12 +409,40 @@ class CodeAnalyzer {
                         stack: event.reason.stack || ''
                     });
                 });
+                
+                // Make shaders path available
+                window.shadersPath = "${shadersPath}";
             </script>
+            
+            <!-- React and React DOM -->
+            <script src="https://unpkg.com/react@17/umd/react.production.min.js" crossorigin></script>
+            <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js" crossorigin></script>
+            
+            <!-- Three.js and related libraries -->
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r132/three.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@react-three/fiber@7.0.26/dist/react-three-fiber.umd.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@react-three/drei@8.20.2/index.umd.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@react-three/postprocessing@2.3.0/dist/index.umd.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/postprocessing@6.26.3/build/postprocessing.min.js"></script>
+            
+            <!-- D3.js for data visualization -->
             <script src="https://d3js.org/d3.v7.min.js"></script>
-            <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-            <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.7.1/gsap.min.js"></script>
+            
+            <!-- GSAP for animations -->
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+            
+            <!-- Framer Motion for UI animations -->
+            <script src="https://cdn.jsdelivr.net/npm/framer-motion@6.2.8/dist/framer-motion.min.js"></script>
+            
+            <!-- Shader scripts - these will be loaded dynamically by main.js -->
+            <script id="node-vertex-shader" type="x-shader/x-vertex" src="${shadersPath}/nodeVertex.glsl"></script>
+            <script id="node-fragment-shader" type="x-shader/x-fragment" src="${shadersPath}/nodeFragment.glsl"></script>
+            <script id="edge-vertex-shader" type="x-shader/x-vertex" src="${shadersPath}/edgeVertex.glsl"></script>
+            <script id="edge-fragment-shader" type="x-shader/x-fragment" src="${shadersPath}/edgeFragment.glsl"></script>
+            <script id="background-vertex-shader" type="x-shader/x-vertex" src="${shadersPath}/backgroundVertex.glsl"></script>
+            <script id="background-fragment-shader" type="x-shader/x-fragment" src="${shadersPath}/backgroundFragment.glsl"></script>
+            <script id="particle-vertex-shader" type="x-shader/x-vertex" src="${shadersPath}/particleVertex.glsl"></script>
+            <script id="particle-fragment-shader" type="x-shader/x-fragment" src="${shadersPath}/particleFragment.glsl"></script>
         </head>
         <body>
             <div id="root"></div>

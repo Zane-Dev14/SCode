@@ -1,0 +1,29 @@
+{
+  "name": "scode-analyzer-ui",
+  "version": "1.0.0",
+  "description": "3D visualization for SCode Analyzer",
+  "main": "main.js",
+  "scripts": {
+    "build": "babel components --out-dir dist --extensions '.jsx,.js' --source-maps",
+    "watch": "babel components --out-dir dist --extensions '.jsx,.js' --source-maps --watch"
+  },
+  "dependencies": {
+    "@react-three/drei": "^8.20.2",
+    "@react-three/fiber": "^7.0.26",
+    "@react-three/postprocessing": "^2.3.0",
+    "d3": "^7.8.5",
+    "framer-motion": "^6.2.8",
+    "gsap": "^3.9.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "three": "^0.132.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.18.10",
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@babel/plugin-transform-runtime": "^7.18.10",
+    "@babel/preset-env": "^7.18.10",
+    "@babel/preset-react": "^7.18.6"
+  }
+} 

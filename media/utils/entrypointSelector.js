@@ -13,7 +13,7 @@ export function initEntrypointSelector(root, analysisData, onSelect) {
     root.appendChild(container);
 
     // Initialize background effects
-    const { scene, camera, renderer, animate } = initShaderBackground(container);
+    const { scene, camera, renderer, animate: animateShader } = initShaderBackground(container);
     const particles = initParticleSystem(scene);
     const d3Background = initD3Background(container);
 
@@ -74,13 +74,13 @@ export function initEntrypointSelector(root, analysisData, onSelect) {
     });
 
     // Animation loop
-    function animate() {
-        requestAnimationFrame(animate);
+    function animateLoop() {
+        requestAnimationFrame(animateLoop);
         particles.update();
         renderer.render(scene, camera);
         d3Background.update();
     }
-    animate();
+    animateLoop();
 
     // Return cleanup function
     return () => {

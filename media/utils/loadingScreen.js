@@ -3,7 +3,29 @@ import { initShaderBackground } from './shaders';
 import { initParticleSystem } from './particles';
 import { initD3Background } from './d3Background';
 
-export function initLoadingScreen(root, progress) {
+// Store references to UI elements and animation components
+let progressFill = null;
+let progressText = null;
+let backgroundCleanup = null;
+let d3Cleanup = null;
+let animationFrameId = null;
+
+function updateProgress(newProgress) {
+    if (progressFill && progressText) {
+        const clampedProgress = Math.min(100, Math.max(0, newProgress));
+        progressFill.style.width = `${clampedProgress}%`;
+        progressText.textContent = `${Math.round(clampedProgress)}%`;
+        console.log('Loading progress updated:', clampedProgress);
+    }
+}
+
+export function initLoadingScreen(root, currentProgress) {
+    // Clear previous content and cleanup if necessary
+    root.innerHTML = '';
+    if (typeof backgroundCleanup === 'function') backgroundCleanup();
+    if (typeof d3Cleanup === 'function') d3Cleanup();
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
     // Create container
     const container = document.createElement('div');
     container.style.width = '100%';
@@ -13,9 +35,11 @@ export function initLoadingScreen(root, progress) {
     root.appendChild(container);
 
     // Initialize background effects
-    const { scene, camera, renderer, animate } = initShaderBackground(container);
-    const particles = initParticleSystem(scene);
-    const d3Background = initD3Background(container);
+    const background = initShaderBackground(container);
+    const particles = initParticleSystem(background.scene);
+    const d3Bg = initD3Background(container);
+    backgroundCleanup = background.cleanup;
+    d3Cleanup = d3Bg.cleanup;
 
     // Create loading UI
     const loadingUI = document.createElement('div');
@@ -39,48 +63,42 @@ export function initLoadingScreen(root, progress) {
     progressBar.style.overflow = 'hidden';
     loadingUI.appendChild(progressBar);
 
-    const progressFill = document.createElement('div');
-    progressFill.style.width = '0%';
+    // Assign to module-level variable
+    progressFill = document.createElement('div');
+    progressFill.style.width = '0%'; // Start at 0
     progressFill.style.height = '100%';
     progressFill.style.backgroundColor = '#4a9eff';
     progressFill.style.transition = 'width 0.3s ease';
     progressBar.appendChild(progressFill);
 
     // Loading text
-    const loadingText = document.createElement('div');
-    loadingText.style.fontSize = '24px';
-    loadingText.style.marginBottom = '10px';
-    loadingText.textContent = 'Loading Visualization...';
-    loadingUI.appendChild(loadingText);
+    const loadingTextElement = document.createElement('div');
+    loadingTextElement.style.fontSize = '24px';
+    loadingTextElement.style.marginBottom = '10px';
+    loadingTextElement.textContent = 'Loading Visualization...';
+    loadingUI.appendChild(loadingTextElement);
 
     // Progress text
-    const progressText = document.createElement('div');
+    // Assign to module-level variable
+    progressText = document.createElement('div');
     progressText.style.fontSize = '14px';
     progressText.style.opacity = '0.7';
-    progressText.textContent = '0%';
+    progressText.textContent = '0%'; // Start at 0
     loadingUI.appendChild(progressText);
 
-    // Animation loop
-    function animate() {
-        requestAnimationFrame(animate);
+    // Start the animation loop
+    function animateLoop() {
+        animationFrameId = requestAnimationFrame(animateLoop);
         particles.update();
-        renderer.render(scene, camera);
-        d3Background.update();
+        background.renderer.render(background.scene, background.camera); // Use returned renderer/scene/camera
+        d3Bg.update();
     }
-    animate();
+    background.animate(); // Start shader animation
+    animateLoop(); // Start combined loop
 
-    // Update progress
-    function updateProgress(newProgress) {
-        progressFill.style.width = `${newProgress}%`;
-        progressText.textContent = `${Math.round(newProgress)}%`;
-    }
+    // Set initial progress
+    updateProgress(currentProgress);
 
-    // Initial progress
-    updateProgress(progress);
-
-    // Return cleanup function
-    return () => {
-        renderer.dispose();
-        d3Background.cleanup();
-    };
+    // Expose the updateProgress function for external updates
+    return { updateProgress };
 } 

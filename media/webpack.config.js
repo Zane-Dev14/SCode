@@ -4,42 +4,37 @@ module.exports = {
   mode: 'development',
   entry: './main.js',
   output: {
-    filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
-    publicPath: '',
-    globalObject: 'window'
+    filename: 'bundle.js'
   },
   module: {
     rules: [
       {
-        test: /\.(js|jsx)$/,
+        test: /\.js$/,
         exclude: /node_modules/,
         use: {
           loader: 'babel-loader',
           options: {
-            presets: [
-              ['@babel/preset-env', { targets: "defaults" }],
-              ['@babel/preset-react', { runtime: "automatic" }]
-            ]
+            presets: ['@babel/preset-env']
           }
         }
       },
       {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader']
+        test: /\.(glsl|vs|fs|vert|frag)$/,
+        exclude: /node_modules/,
+        use: [
+          'raw-loader',
+          'glslify-loader'
+        ]
       },
       {
-        test: /\.(glsl|vs|fs|vert|frag)$/,
-        type: 'asset/source'
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
       }
     ]
   },
   resolve: {
-    extensions: ['.js', '.jsx'],
-    fallback: {
-      "fs": false,
-      "path": false
-    }
+    extensions: ['.js', '.glsl', '.vs', '.fs', '.vert', '.frag']
   },
   devtool: 'source-map'
 }; 

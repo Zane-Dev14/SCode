@@ -1,32 +1,25 @@
 {
-  "name": "scode-media",
+  "name": "code-visualizer",
   "version": "1.0.0",
-  "description": "UI for SCode Analyzer",
+  "description": "Code visualization tool",
   "main": "main.js",
   "scripts": {
     "build": "webpack --mode production",
-    "watch": "webpack --watch --mode development"
+    "dev": "webpack --mode development --watch"
   },
   "dependencies": {
-    "@react-three/drei": "^7.0.0",
-    "@react-three/fiber": "^7.0.0",
-    "@react-three/postprocessing": "^2.0.0",
     "d3": "^7.8.5",
-    "framer-motion": "^4.1.17",
-    "gsap": "^3.7.1",
-    "postprocessing": "^6.22.0",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "three": "^0.132.2"
+    "three": "^0.160.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.14.6",
-    "@babel/preset-env": "^7.14.7",
-    "@babel/preset-react": "^7.14.5",
-    "babel-loader": "^8.2.2",
-    "css-loader": "^5.2.6",
-    "style-loader": "^2.0.0",
-    "webpack": "^5.44.0",
-    "webpack-cli": "^4.7.2"
+    "@babel/core": "^7.23.7",
+    "@babel/preset-env": "^7.23.7",
+    "babel-loader": "^9.1.3",
+    "css-loader": "^6.8.1",
+    "glslify-loader": "^2.0.0",
+    "raw-loader": "^4.0.2",
+    "style-loader": "^3.3.3",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
   }
 }

@@ -16,8 +16,6 @@ from vulnerability_scanner import detect_vulnerabilities
 from language_detector import detect_language
 from ast_functions import traverse,extract_imports,extract_variables,resolve_function_call
 
-
-# Map language names to Tree-sitter language objects
 LANGUAGE_MAPPING = {
     'python': python_language(),
     'javascript': js_language(),
@@ -331,50 +329,32 @@ def generate_project_asts(project_dir, entrypoint_file, output_file=None):
     # Check if entrypoint exists
     if entrypoint_file not in ast_map:
         raise ValueError(f"Entrypoint file '{entrypoint_file}' not found in project directory '{project_dir}'")
-    # print(ast_map)
-    # for i in ast_map:
-    #     print(ast_map[i])
+    
     main_ast = ast_map[entrypoint_file]
-    # print(main_ast)
+   
     expanded_asts = {}
     modules_used = set()
-    referenced_files = set([entrypoint_file])  # Initialize with the entrypoint file
+    referenced_files = set([entrypoint_file])  
     
     # Generate the expanded AST and track referenced files
     ast_dict = node_to_dict(main_ast, function_map, expanded_asts, modules_used, referenced_files, file_path=entrypoint_file)
-    # print("\n",main_ast,"\n", function_map,"\n", expanded_asts,"\n", modules_used,"\n", referenced_files,entrypoint_file)
-    # print(ast_dict)
-    # Collect imports from referenced files after expansion
+    
     for file_path in referenced_files:
         root_node = ast_map[file_path]
         extract_imports(root_node, modules_used)
-        
-    
-    # Build the result dictionary
+  
     ast_map_dict = {
         "main_ast": ast_dict,
-        "modules_used": sorted(list(modules_used)),  # Sorted for consistent output
-        "referenced_files": sorted(list(referenced_files))  # Include file names for visualization
-    }
-    
-    # Optionally include ASTs for referenced files (unexpanded)
-    # for file_path in referenced_files:
-    #     if file_path != entrypoint_file:
-    #         ast_map_dict[file_path] = {
-    #             "type": ast_map[file_path].type,
-    #             "text": ast_map[file_path].text.decode('utf-8')
-    #         }
-    
-    # Use provided output file or default to a project-specific path
-    output_path = output_file or "sample_project/ast_output.json"
-    # print(ast_map_dict)
+        "modules_used": sorted(list(modules_used)), 
+        "referenced_files": sorted(list(referenced_files))  
+    }   
+    output_path = os.path.join(os.path.dirname(__file__), "sample_project", "ast_output.json")
+    output_file2 = os.path.join(os.path.dirname(__file__), "sample_project", "extracted.json")
     save_ast_to_file(ast_map_dict, output_path)
-    # print(f"\n\n{ast_map_dict}\n")
-    # print(extract_ast_details(ast_map_dict,entrypoint_file))
     writeTojson=extract_ast_details(ast_map_dict,entrypoint_file)
-    with open('sample_project/extracted.json','w') as f:
+    with open(output_file2,'w') as f:
         json.dump(writeTojson,f)
-    return ast_map_dict  # Return for further use or testing
+    return ast_map_dict  
 
 def extract_ast_details(ast, file_path):
     """

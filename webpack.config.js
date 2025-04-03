@@ -39,7 +39,10 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env', '@babel/preset-react'],
+            presets: [
+              ['@babel/preset-env', { targets: 'node 14' }],
+              '@babel/preset-react'
+            ],
             plugins: [
               '@babel/plugin-proposal-class-properties',
               '@babel/plugin-transform-runtime'
@@ -56,7 +59,13 @@ module.exports = {
   plugins: [
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'media', to: 'media' }
+        { 
+          from: 'media', 
+          to: 'media',
+          globOptions: {
+            ignore: ['**/*.js', '**/*.jsx'] // Don't copy JS/JSX files directly
+          }
+        }
       ]
     })
   ],

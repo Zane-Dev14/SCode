@@ -7,7 +7,7 @@ import CodeVisualizer from './CodeVisualizer';
 // Main App component
 const App = () => {
   const [currentView, setCurrentView] = useState('loading');
-  const [loadingMessage, setLoadingMessage] = useState('Initializing...');
+  const [loadingMessage, setLoadingMessage] = useState('Initializing visualization...');
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [projectDir, setProjectDir] = useState(null);
   const [astData, setAstData] = useState(null);
@@ -16,12 +16,27 @@ const App = () => {
   
   // Initialize the communication with the VS Code extension
   useEffect(() => {
+    console.log('App component mounted');
+    
     // Ensure vscode API is available
     if (!window.vscode) {
       console.error('VS Code API not found');
       setError('VS Code API not available');
       return;
     }
+    
+    // Set initial loading state
+    setCurrentView('loading');
+    setLoadingMessage('Initializing visualization...');
+    setLoadingProgress(0);
+    
+    // Simulate loading progress for at least 5 seconds
+    const loadingInterval = setInterval(() => {
+      setLoadingProgress(prev => {
+        const newProgress = Math.min(prev + 0.05, 0.9);
+        return newProgress;
+      });
+    }, 500);
     
     // Listen for messages from the extension
     const messageHandler = (event) => {
@@ -42,28 +57,41 @@ const App = () => {
           setLoadingProgress(0.2);
           break;
           
-        case 'astData':
-          // We received AST data, switch to visualization
+        case 'analysis':
+          console.log('Received analysis data:', message.data);
+          // We received AST data, but keep loading screen for at least 5 seconds
           setAstData(message.data);
-          setLoadingProgress(1);
-          // Use a small delay to show the completed progress before switching
+          setLoadingProgress(0.95);
+          
+          // Use a delay to show the completed progress before switching
           setTimeout(() => {
-            setCurrentView('ast');
-          }, 500);
+            clearInterval(loadingInterval);
+            setLoadingProgress(1);
+            
+            // Additional delay to ensure loading screen is visible for at least 5-10 seconds
+            setTimeout(() => {
+              setCurrentView('ast');
+            }, 2000);
+          }, 3000);
           break;
           
         case 'error':
           setError(message.message);
           setLoadingMessage(`Error: ${message.message}`);
+          clearInterval(loadingInterval);
           break;
       }
     };
     
     window.addEventListener('message', messageHandler);
     
-    // Clean up the event listener on unmount
+    // Request initial analysis data
+    window.vscode.postMessage({ command: 'getAnalysis' });
+    
+    // Clean up the event listener and interval on unmount
     return () => {
       window.removeEventListener('message', messageHandler);
+      clearInterval(loadingInterval);
     };
   }, []);
   
@@ -76,153 +104,61 @@ const App = () => {
       setLoadingProgress(0.3);
     } else if (message.includes('Python server started')) {
       setLoadingProgress(0.5);
-    } else if (message.includes('Analyzing')) {
+    } else if (message.includes('Analyzing code')) {
       setLoadingProgress(0.7);
+    } else if (message.includes('Generating visualization')) {
+      setLoadingProgress(0.9);
     }
   };
   
-  // Handle selecting an entrypoint file
+  // Handle entrypoint selection
   const handleSelectEntrypoint = (projectDir, entrypoint) => {
-    // Show loading screen while analyzing with the selected entry point
-    setCurrentView('loading');
-    setLoadingMessage('Analyzing with selected entry point...');
-    setLoadingProgress(0.4);
-    
-    // Send message to extension with selected entrypoint
-    window.vscode.postMessage({
-      command: 'selectEntrypoint',
-      projectDir,
-      entrypoint
-    });
+    setProjectDir(projectDir);
+    setCurrentView('ast');
   };
   
-  // Handle switching the view
+  // Switch between views
   const switchView = (view) => {
-    if (currentView === view) return;
     setCurrentView(view);
   };
   
-  // Render based on current view
+  // Render the current view
   const renderView = () => {
+    console.log('Rendering view:', currentView);
+    
     switch (currentView) {
       case 'loading':
         return (
           <LoadingScreen 
-            message={loadingMessage}
-            progress={loadingProgress}
-            isVisible={true}
+            message={loadingMessage} 
+            progress={loadingProgress} 
+            isVisible={true} 
           />
         );
-        
       case 'entrypoint':
         return (
-          <EntrypointSelector
-            files={files}
-            projectDir={projectDir}
-            onSelectEntrypoint={handleSelectEntrypoint}
-            isVisible={true}
+          <EntrypointSelector 
+            projectDir={projectDir} 
+            onSelect={handleSelectEntrypoint} 
           />
         );
-        
       case 'ast':
         return (
-          <CodeVisualizer
-            astData={astData}
-            viewMode="ast"
+          <CodeVisualizer 
+            astData={astData} 
+            files={files} 
+            onBack={() => switchView('entrypoint')} 
           />
         );
-        
-      case 'modules':
-        return (
-          <CodeVisualizer
-            astData={astData}
-            viewMode="modules"
-          />
-        );
-        
-      case 'vulnerabilities':
-        return (
-          <CodeVisualizer
-            astData={astData}
-            viewMode="vulnerabilities"
-          />
-        );
-        
       default:
-        return (
-          <div className="error-view">
-            <h1>Unknown view: {currentView}</h1>
-          </div>
-        );
+        return <div>Unknown view: {currentView}</div>;
     }
   };
   
-  // Effect to handle entrypoint selection when needed
-  useEffect(() => {
-    if (astData && astData.status === 'needs_entrypoint') {
-      setFiles(astData.options || []);
-      setCurrentView('entrypoint');
-    }
-  }, [astData]);
-  
-  // Render error message if there's an error
-  if (error && currentView !== 'loading') {
-    return (
-      <div className="error-view">
-        <h1>Error</h1>
-        <p>{error}</p>
-        <button onClick={() => window.vscode.postMessage({ command: 'requestAst' })}>
-          Retry
-        </button>
-      </div>
-    );
-  }
-  
   return (
     <div className="app-container">
-      {/* Header with view switcher */}
-      {currentView !== 'loading' && currentView !== 'entrypoint' && (
-        <header className="app-header">
-          <div className="app-title">Code Analyzer</div>
-          <nav className="view-nav">
-            <button 
-              className={`nav-button ${currentView === 'ast' ? 'active' : ''}`}
-              onClick={() => switchView('ast')}
-            >
-              AST View
-            </button>
-            <button 
-              className={`nav-button ${currentView === 'modules' ? 'active' : ''}`}
-              onClick={() => switchView('modules')}
-            >
-              Module Dependencies
-            </button>
-            <button 
-              className={`nav-button ${currentView === 'vulnerabilities' ? 'active' : ''}`}
-              onClick={() => switchView('vulnerabilities')}
-            >
-              Vulnerabilities
-            </button>
-          </nav>
-        </header>
-      )}
-      
-      {/* Main content with view */}
-      <main className="app-content">
-        <AnimatePresence mode="wait">
-          {renderView()}
-        </AnimatePresence>
-      </main>
-      
-      {/* Error toast for displaying errors */}
-      <AnimatePresence>
-        {error && (
-          <div className="error-toast">
-            <div className="error-icon">⚠️</div>
-            <div className="error-message">{error}</div>
-            <button className="error-close" onClick={() => setError(null)}>×</button>
-          </div>
-        )}
+      <AnimatePresence mode="wait">
+        {renderView()}
       </AnimatePresence>
     </div>
   );

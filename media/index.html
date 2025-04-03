@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCode Visualization</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Load React and ReactDOM -->
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <!-- Load Framer Motion -->
+    <script src="https://unpkg.com/framer-motion@4.1.17/dist/framer-motion.js"></script>
+    <!-- Load Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@react-three/fiber@7.0.0/dist/index.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@react-three/postprocessing@2.0.0/dist/index.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/postprocessing@6.22.0/build/postprocessing.min.js"></script>
+    <!-- Load GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.7.1/gsap.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <canvas id="shader-canvas"></canvas>
+    <canvas id="code-graph"></canvas>
+    
+    <!-- Controls -->
+    <div class="controls">
+        <button id="zoom-in">Zoom In</button>
+        <button id="zoom-out">Zoom Out</button>
+        <button id="reset">Reset</button>
+    </div>
+    
+    <!-- Load our app -->
+    <script src="main.js" type="module"></script>
+    
+    <script>
+        // Initialize VS Code API
+        const vscode = acquireVsCodeApi();
+        
+        // Listen for messages from the extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            if (message.command === 'astData') {
+                // Initialize visualization with AST data
+                window.initVisualization(message.data);
+            }
+        });
+    </script>
+</body>
+</html> 

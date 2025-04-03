@@ -51,16 +51,12 @@ export const createForceSimulation = (nodes, links, options = {}) => {
         d3.forceCollide()
             .radius(d => (d.size || 1) * 10)
             .strength(0.7)
-            .iterations(2)
+            .iterations(2),
+        
+        // Z-axis force using forceY
+        d3.forceY()
+            .strength(config.gravity)
     ];
-    
-    // For 3D, add z-axis forces
-    if (is3D) {
-        forces.push(
-            // Z-center force
-            d3.forceZ(0).strength(config.gravity)
-        );
-    }
     
     // Apply all forces to simulation
     simulation
@@ -71,11 +67,8 @@ export const createForceSimulation = (nodes, links, options = {}) => {
         .force('link', forces[1])
         .force('charge', forces[2])
         .force('center', forces[0])
-        .force('collision', forces[3]);
-        
-    if (is3D) {
-        simulation.force('z', forces[4]);
-    }
+        .force('collision', forces[3])
+        .force('z', forces[4]);
     
     return simulation;
 };
@@ -195,4 +188,15 @@ export const applyForceSimulation = (nodes, links, threeObjects, animate = true)
             }
         }
     });
-}; 
+};
+
+export function updateForceSimulation(simulation, nodes, edges) {
+    simulation
+        .nodes(nodes)
+        .force('link').links(edges);
+
+    // Run simulation for 300 iterations
+    for (let i = 0; i < 300; ++i) simulation.tick();
+
+    return simulation;
+} 

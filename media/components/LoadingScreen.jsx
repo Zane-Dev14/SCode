@@ -4,6 +4,7 @@ import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { motion } from 'framer-motion';
 import { createParticleSystem } from '../utils/shaderUtils';
 
 const PARTICLE_COUNT = 500;
@@ -209,9 +210,14 @@ const LoadingMessage = ({ message }) => {
   }, [message, displayMessage]);
   
   return (
-    <div className="loading-message">
+    <motion.div 
+      className="loading-message"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+    >
       <div className="loading-message-text">{displayMessage}</div>
-    </div>
+    </motion.div>
   );
 };
 

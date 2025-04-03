@@ -3,12 +3,19 @@ from flask_cors import CORS
 import os
 import json
 import sys
+import threading
+import time
 # from analyzer import analyze_project
 from ast_generator import generate_project_asts
 from language_detector import find_entrypoint
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+def print_server_started():
+    """Print a message after a short delay to indicate the server is ready"""
+    time.sleep(1)  # Wait for the server to start
+    print("Server started")  # This message is needed by the Node.js code to detect server startup
 
 @app.route('/health')
 def health():
@@ -71,9 +78,9 @@ def analyze():
         result = generate_project_asts(abs_project_dir, full_entrypoint_path)
         
         # Save result to file
-        output_dir = os.path.join(os.path.dirname(__file__), "output")
+        output_dir = os.path.join(os.path.dirname(__file__), "sample_project")
         os.makedirs(output_dir, exist_ok=True)
-        output_file = os.path.join(output_dir, "ast_data.json")
+        output_file = os.path.join(output_dir, "ast_output.json")
         with open(output_file, "w") as f:
             json.dump(result, f)
         print(f"AST saved to {output_file}")
@@ -97,13 +104,10 @@ def analyze():
 @app.route('/ast', methods=['GET'])
 def get_ast():
     """Get the AST for the analyzed project"""
-    output_file = os.path.join(os.path.dirname(__file__), "output", "extracted_ast.json")
+    output_file = os.path.join(os.path.dirname(__file__), "sample_project", "ast_output.json")
 
     if not os.path.exists(output_file):
-        # If not found, check for the sample file
-        output_file = os.path.join(os.path.dirname(__file__), "sample_project", "extracted_ast.json")
-        if not os.path.exists(output_file):
-            return jsonify({"error": "AST data not found"}), 404
+        return jsonify({"error": "AST data not found"}), 404
     
     # Read the AST file
     try:
@@ -177,6 +181,9 @@ if __name__ == '__main__':
     # Log startup info
     print(f"Starting Flask server on port {port}")
     print(f"Debug mode: {debug}")
+    
+    # Start a thread to print the server started message
+    threading.Thread(target=print_server_started).start()
     
     # Run the server
     app.run(host='0.0.0.0', port=port, debug=True)

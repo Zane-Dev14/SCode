@@ -5,7 +5,7 @@ import EntrypointSelector from './EntrypointSelector';
 import CodeVisualizer from './CodeVisualizer';
 
 // Main App component
-const App = () => {
+export default function App() {
   const [currentView, setCurrentView] = useState('loading');
   const [loadingMessage, setLoadingMessage] = useState('Initializing visualization...');
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -13,11 +13,10 @@ const App = () => {
   const [astData, setAstData] = useState(null);
   const [files, setFiles] = useState([]);
   const [error, setError] = useState(null);
+  const [analysisData, setAnalysisData] = useState(null);
   
   // Initialize the communication with the VS Code extension
   useEffect(() => {
-    console.log('App component mounted');
-    
     // Ensure vscode API is available
     if (!window.vscode) {
       console.error('VS Code API not found');
@@ -41,7 +40,6 @@ const App = () => {
     // Listen for messages from the extension
     const messageHandler = (event) => {
       const message = event.data;
-      console.log('Received message:', message);
       
       switch (message.command) {
         case 'loading':
@@ -124,8 +122,6 @@ const App = () => {
   
   // Render the current view
   const renderView = () => {
-    console.log('Rendering view:', currentView);
-    
     switch (currentView) {
       case 'loading':
         return (
@@ -150,6 +146,8 @@ const App = () => {
             onBack={() => switchView('entrypoint')} 
           />
         );
+      case 'visualization':
+        return <VisualizationPanel data={analysisData} />;
       default:
         return <div>Unknown view: {currentView}</div>;
     }
@@ -162,6 +160,4 @@ const App = () => {
       </AnimatePresence>
     </div>
   );
-};
-
-export default App; 
+} 

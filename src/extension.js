@@ -204,14 +204,35 @@ function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
             console.log = function(...args) {
                 const safeArgs = args.map(arg => {
                     try {
-                        return typeof arg === 'object' ? JSON.stringify(arg) : arg;
+                        if (typeof arg === 'object') {
+                            const seen = new WeakSet();
+                            return JSON.stringify(arg, function(key, value) {
+                                if (key === 'stateNode' || key === '__reactContainer$' || key === 'containerInfo') {
+                                    return '[Internal]';
+                                }
+                                if (value instanceof Element) {
+                                    return '[' + value.tagName + ']';
+                                }
+                                if (typeof value === 'function') {
+                                    return '[Function]';
+                                }
+                                if (typeof value === 'object' && value !== null) {
+                                    if (seen.has(value)) {
+                                        return '[Circular]';
+                                    }
+                                    seen.add(value);
+                                }
+                                return value;
+                            });
+                        }
+                        return arg;
                     } catch (e) {
                         return '[Circular Structure]';
                     }
                 });
                 debugInfo.innerHTML += safeArgs.join(' ') + '<br>';
                 window.vscode.postMessage({ type: 'log', message: safeArgs.join(' ') });
-                originalLog.apply(console, args);
+                originalLog.apply(console, safeArgs);
             };
 
             console.error = function(...args) {

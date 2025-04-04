@@ -11,11 +11,10 @@ let d3Cleanup = null;
 let animationFrameId = null;
 
 function updateProgress(newProgress) {
-    if (progressFill && progressText) {5
+    if (progressFill && progressText) {
         const clampedProgress = Math.min(100, Math.max(0, newProgress));
         progressFill.style.width = `${clampedProgress}%`;
         progressText.textContent = `${Math.round(clampedProgress)}%`;
-        console.log('Loading progress updated:', clampedProgress);
     }
 }
 

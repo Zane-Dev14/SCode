@@ -119,7 +119,7 @@ class VisualizationPanel {
                     <div class="loading-screen">
                         <div class="loading-content">
                             <div class="loading-spinner"></div>
-                            <div class="loading-text">Initializing Visualization...</div>
+                            
                         </div>
                     </div>
                     <div class="main-container">

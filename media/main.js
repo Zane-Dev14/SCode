@@ -140,9 +140,17 @@ function handleExtensionMessage(message) {
             }
             break;
         case 'showAnalysis':
-            // Store data and ensure loading screen shows 100%
+            // Store data and ensure startup animation plays
             state.analysisData = message.data;
             state.visualizationData = message.data;
+            
+            // If we're in startup, let it complete first
+            if (state.appState === 'startup') {
+                // The startup animation will trigger loading state when done
+                return;
+            }
+            
+            // Otherwise show loading at 100% briefly
             state.progress = 100;
             state.loading = true;
             state.appState = 'loading';
@@ -150,10 +158,10 @@ function handleExtensionMessage(message) {
             
             // Wait for loading screen to show 100% before transitioning
             setTimeout(() => {
-                state.appState = 'visualization';
                 state.loading = false;
+                state.appState = 'visualization';
                 updateUI();
-            }, 10000);
+            }, 100);
             break;
         case 'updateProgress':
             // Always show 100%
@@ -161,6 +169,20 @@ function handleExtensionMessage(message) {
             if (currentViewUpdater && typeof currentViewUpdater.updateProgress === 'function') {
                 currentViewUpdater.updateProgress(100);
             }
+            
+            // Wait 5 seconds then transition to visualization
+            setTimeout(() => {
+                // Clear everything
+                const root = document.getElementById('root');
+                while (root.firstChild) {
+                    root.removeChild(root.firstChild);
+                }
+                
+                // Show visualization
+                state.appState = 'visualization';
+                state.loading = false;
+                updateUI();
+            }, 5000);
             break;
         case 'error':
             state.error = message.error;
@@ -196,10 +218,16 @@ function updateUI() {
             const startup = initStartupAnimation(root, () => {
                 console.log('Startup animation complete.');
                 state.appState = 'loading';
+                state.progress = 100;
+                state.loading = true;
                 updateUI();
-                window.vscode.postMessage({
-                    command: 'startAnalysis'
-                });
+                
+                // Wait for loading screen to show 100% before starting analysis
+                setTimeout(() => {
+                    window.vscode.postMessage({
+                        command: 'startAnalysis'
+                    });
+                }, 100);
             });
             currentCleanup = startup.cleanup;
             break;

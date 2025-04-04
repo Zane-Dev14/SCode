@@ -23,7 +23,8 @@ const state = {
     currentView: 'loading',
     analysisData: null,
     selectedEntrypoint: null,
-    error: null
+    error: null,
+    visualizationData: null
 };
 
 // VS Code API is acquired in the inline script (extension.js) and available as window.vscode
@@ -137,11 +138,11 @@ function handleExtensionMessage(message) {
             }
             break;
         case 'showAnalysis':
-            // If we receive analysis during startup, wait until startup finishes
-             if (state.appState !== 'startup') {
+            if (state.appState !== 'startup') {
                 state.loading = false;
                 state.analysisData = message.data;
-                state.appState = 'entrypoint';
+                state.visualizationData = message.data;
+                state.appState = 'visualization';
                 updateUI();
             }
             break;
@@ -203,9 +204,9 @@ function updateUI() {
             currentCleanup = entrypoint.cleanup; // Store cleanup function
             break;
         case 'visualization':
-            console.log('Initializing code visualizer...');
-            const visualizer = initCodeVisualizer(root, state.analysisData, state.selectedEntrypoint);
-             currentCleanup = visualizer.cleanup; // Store cleanup function
+            console.log('Initializing visualization panel...');
+            const visualization = initVisualizationPanel(root, state.visualizationData);
+            currentCleanup = visualization.cleanup;
             break;
          case 'error': // Handle error state explicitly if needed
              showError(state.error || 'An unknown error occurred.');
@@ -235,6 +236,86 @@ function handleEntrypointSelect(entrypoint) {
 // Initialize app
 console.log('Initializing application...');
 updateUI(); // Start with the initial state (startup)
+
+// Add visualization initialization function
+function initVisualizationPanel(root, data) {
+    // Clear previous content
+    root.innerHTML = '';
+
+    // Create main container
+    const container = document.createElement('div');
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.position = 'relative';
+    container.style.display = 'flex';
+    root.appendChild(container);
+
+    // Create sidebar
+    const sidebar = document.createElement('div');
+    sidebar.className = 'sidebar';
+    sidebar.style.width = '250px';
+    sidebar.style.height = '100%';
+    sidebar.style.backgroundColor = '#1e1e1e';
+    sidebar.style.borderRight = '1px solid #333';
+    sidebar.style.padding = '20px';
+    sidebar.style.overflowY = 'auto';
+    container.appendChild(sidebar);
+
+    // Add sidebar content
+    sidebar.innerHTML = `
+        <div class="sidebar-header">
+            <h2 style="color: #fff; margin: 0 0 20px 0;">Code Analyzer</h2>
+        </div>
+        <div class="sidebar-menu">
+            <button class="menu-item active" data-view="ast" style="width: 100%; padding: 10px; margin: 5px 0; background: #2d2d2d; border: none; color: #fff; text-align: left; cursor: pointer; border-radius: 4px;">
+                <span class="icon">🔍</span>
+                <span>AST View</span>
+            </button>
+            <button class="menu-item" data-view="modules" style="width: 100%; padding: 10px; margin: 5px 0; background: #2d2d2d; border: none; color: #fff; text-align: left; cursor: pointer; border-radius: 4px;">
+                <span class="icon">📦</span>
+                <span>Module Dependencies</span>
+            </button>
+            <button class="menu-item" data-view="vulnerabilities" style="width: 100%; padding: 10px; margin: 5px 0; background: #2d2d2d; border: none; color: #fff; text-align: left; cursor: pointer; border-radius: 4px;">
+                <span class="icon">🔒</span>
+                <span>Vulnerabilities</span>
+            </button>
+        </div>
+        <div class="sidebar-stats" style="margin-top: 20px;">
+            <div class="stat-item" style="margin: 10px 0;">
+                <span class="stat-label" style="color: #888;">Files</span>
+                <span class="stat-value" id="files-count" style="color: #fff; float: right;">${data?.files?.length || 0}</span>
+            </div>
+            <div class="stat-item" style="margin: 10px 0;">
+                <span class="stat-label" style="color: #888;">Nodes</span>
+                <span class="stat-value" id="nodes-count" style="color: #fff; float: right;">${data?.nodes?.length || 0}</span>
+            </div>
+            <div class="stat-item" style="margin: 10px 0;">
+                <span class="stat-label" style="color: #888;">Issues</span>
+                <span class="stat-value" id="issues-count" style="color: #fff; float: right;">${data?.issues?.length || 0}</span>
+            </div>
+        </div>
+    `;
+
+    // Create visualization container
+    const vizContainer = document.createElement('div');
+    vizContainer.style.flex = '1';
+    vizContainer.style.height = '100%';
+    vizContainer.style.position = 'relative';
+    container.appendChild(vizContainer);
+
+    // Add visualization canvas
+    const canvas = document.createElement('canvas');
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    vizContainer.appendChild(canvas);
+
+    // Cleanup function
+    const cleanup = () => {
+        root.innerHTML = '';
+    };
+
+    return { cleanup };
+}
 
 // REMOVED OBSOLETE WEBGL VISUALIZATION CODE BLOCK
 // The code from approximately line 211 to 433 related to 

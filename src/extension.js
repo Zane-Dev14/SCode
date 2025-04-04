@@ -449,6 +449,58 @@ function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
             window.vscode = acquireVsCodeApi();
             window.projectDir = "${projectDir}";
 
+            // D3 Background
+            const svg = d3.select('body')
+                .append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .style('position', 'fixed')
+                .style('top', 0)
+                .style('left', 0)
+                .style('z-index', -2);
+
+            // Create particles
+            const numParticles = 100;
+            const particles = Array.from({ length: numParticles }, () => ({
+                x: Math.random(),
+                y: Math.random(),
+                size: Math.random() * 2 + 1,
+                speed: Math.random() * 0.02 + 0.01,
+                direction: Math.random() * Math.PI * 2
+            }));
+
+            // Draw particles
+            const particleGroup = svg.append('g');
+            const particleElements = particleGroup.selectAll('circle')
+                .data(particles)
+                .enter()
+                .append('circle')
+                .attr('r', d => d.size)
+                .style('fill', 'rgba(0, 255, 157, 0.1)')
+                .style('stroke', 'rgba(0, 255, 157, 0.2)')
+                .style('stroke-width', 0.5);
+
+            // Animate particles
+            function animateParticles() {
+                particles.forEach(particle => {
+                    particle.x += Math.cos(particle.direction) * particle.speed;
+                    particle.y += Math.sin(particle.direction) * particle.speed;
+
+                    // Wrap around edges
+                    if (particle.x < 0) particle.x = 1;
+                    if (particle.x > 1) particle.x = 0;
+                    if (particle.y < 0) particle.y = 1;
+                    if (particle.y > 1) particle.y = 0;
+                });
+
+                particleElements
+                    .attr('cx', d => d.x * window.innerWidth)
+                    .attr('cy', d => d.y * window.innerHeight);
+
+                requestAnimationFrame(animateParticles);
+            }
+            animateParticles();
+
             // Mouse trail effect
             const mouseTrail = document.getElementById('mouse-trail');
             let mouseX = 0;
@@ -478,7 +530,9 @@ function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
             
             const vertexShader = \`
                 attribute vec2 position;
+                varying vec2 vUv;
                 void main() {
+                    vUv = position * 0.5 + 0.5;
                     gl_Position = vec4(position, 0.0, 1.0);
                 }
             \`;
@@ -487,27 +541,106 @@ function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
                 precision highp float;
                 uniform float time;
                 uniform vec2 resolution;
-                
+                uniform vec2 mouse;
+                varying vec2 vUv;
+
+                // Simplex noise functions
+                vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+                vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+                float snoise(vec3 v) {
+                    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+                    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                    vec3 i  = floor(v + dot(v, C.yyy));
+                    vec3 x0 = v - i + dot(i, C.xxx);
+                    vec3 g = step(x0.yzx, x0.xyz);
+                    vec3 l = 1.0 - g;
+                    vec3 i1 = min(g.xyz, l.zxy);
+                    vec3 i2 = max(g.xyz, l.zxy);
+                    vec3 x1 = x0 - i1 + C.xxx;
+                    vec3 x2 = x0 - i2 + C.yyy;
+                    vec3 x3 = x0 - D.yyy;
+                    i = mod289(i);
+                    vec4 p = permute(permute(permute(
+                        i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                        + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                        + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+                    float n_ = 0.142857142857;
+                    vec3 ns = n_ * D.wyz - D.xzx;
+                    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                    vec4 x_ = floor(j * ns.z);
+                    vec4 y_ = floor(j - 7.0 * x_);
+                    vec4 x = x_ * ns.x + ns.yyyy;
+                    vec4 y = y_ * ns.x + ns.yyyy;
+                    vec4 h = 1.0 - abs(x) - abs(y);
+                    vec4 b0 = vec4(x.xy, y.xy);
+                    vec4 b1 = vec4(x.zw, y.zw);
+                    vec4 s0 = floor(b0)*2.0 + 1.0;
+                    vec4 s1 = floor(b1)*2.0 + 1.0;
+                    vec4 sh = -step(h, vec4(0.0));
+                    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+                    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+                    vec3 p0 = vec3(a0.xy, h.x);
+                    vec3 p1 = vec3(a0.zw, h.y);
+                    vec3 p2 = vec3(a1.xy, h.z);
+                    vec3 p3 = vec3(a1.zw, h.w);
+                    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+                    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                    m = m * m; m = m * m;
+                    vec4 px = vec4(dot(x0,p0), dot(x1,p1), dot(x2,p2), dot(x3,p3));
+                    return 42.0 * dot(m, px);
+                }
+
+                float fbm(vec3 p) {
+                    float value = 0.0;
+                    float amplitude = 0.5;
+                    for (int i = 0; i < 4; i++) {
+                        value += amplitude * snoise(p);
+                        p *= 2.0;
+                        amplitude *= 0.5;
+                    }
+                    return value;
+                }
+
                 void main() {
-                    vec2 uv = gl_FragCoord.xy / resolution.xy;
-                    vec3 color = vec3(0.0);
+                    vec2 uv = vUv;
+                    vec2 p = uv * 2.0 - 1.0;
+                    p.x *= resolution.x / resolution.y;
                     
-                    // Create a grid pattern
-                    float grid = 0.0;
-                    grid += sin(uv.x * 50.0 + time) * 0.1;
-                    grid += sin(uv.y * 50.0 + time) * 0.1;
+                    vec2 mouseShift = (mouse - 0.5) * 0.5;
+                    p += mouseShift;
+
+                    float timeScaled = time * 0.1;
+
+                    float fbm1 = fbm(vec3(p * 0.5, timeScaled * 0.5));
+                    fbm1 = (fbm1 + 1.0) * 0.5;
+
+                    float fbm2 = fbm(vec3(p * 1.5 + vec2(timeScaled * 0.8, -timeScaled * 0.6), timeScaled));
+                    fbm2 = (fbm2 + 1.0) * 0.5;
+
+                    vec3 color1 = vec3(0.05, 0.05, 0.1);
+                    vec3 color2 = vec3(0.1, 0.2, 0.4);
+                    vec3 color3 = vec3(0.5, 0.3, 0.6);
+                    vec3 color4 = vec3(0.8, 0.9, 1.0);
+
+                    float mixFactor1 = smoothstep(0.3, 0.6, fbm1);
+                    vec3 finalColor = mix(color1, color2, mixFactor1);
                     
-                    // Add some noise
-                    float noise = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
-                    noise = noise * 0.1;
-                    
-                    // Combine effects
-                    color = vec3(grid + noise);
-                    
-                    // Add a subtle gradient
-                    color += vec3(0.1, 0.2, 0.3) * (1.0 - uv.y);
-                    
-                    gl_FragColor = vec4(color, 0.1);
+                    float mixFactor2 = smoothstep(0.5, 0.8, fbm2);
+                    finalColor = mix(finalColor, color3, mixFactor2 * 0.6);
+
+                    float stars = smoothstep(0.85, 0.9, fbm2 * pow(fbm1, 2.0));
+                    finalColor = mix(finalColor, color4, stars * 0.5);
+
+                    float vignette = 1.0 - length(uv - 0.5) * 1.2;
+                    finalColor *= smoothstep(0.0, 0.8, vignette);
+
+                    float fadeIn = smoothstep(0.0, 1.5, time);
+                    finalColor *= fadeIn;
+
+                    gl_FragColor = vec4(finalColor, 0.1);
                 }
             \`;
 
@@ -541,6 +674,7 @@ function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
 
                 const timeLocation = gl.getUniformLocation(program, 'time');
                 const resolutionLocation = gl.getUniformLocation(program, 'resolution');
+                const mouseLocation = gl.getUniformLocation(program, 'mouse');
 
                 function render(time) {
                     canvas.width = window.innerWidth;
@@ -549,6 +683,7 @@ function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
                     
                     gl.uniform1f(timeLocation, time * 0.001);
                     gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+                    gl.uniform2f(mouseLocation, mouseX / canvas.width, mouseY / canvas.height);
                     
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
                     requestAnimationFrame(render);

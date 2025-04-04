@@ -240,17 +240,323 @@ function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
         <link href="${stylesUri}" rel="stylesheet">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.0.0/d3.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
         <style>
-            body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #1e1e1e; color: white; font-family: system-ui, -apple-system, sans-serif; }
-            #root { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-            .debug-info { display: none; }
+            :root {
+                --primary-color: #00ff9d;
+                --secondary-color: #00b8ff;
+                --background-color: #0a0a0a;
+                --text-color: #ffffff;
+                --accent-color: #ff00ff;
+            }
+
+            body { 
+                margin: 0; 
+                padding: 0; 
+                width: 100vw; 
+                height: 100vh; 
+                overflow: hidden; 
+                background: var(--background-color); 
+                color: var(--text-color); 
+                font-family: 'JetBrains Mono', monospace;
+            }
+
+            #root { 
+                width: 100%; 
+                height: 100%; 
+                position: absolute; 
+                top: 0; 
+                left: 0;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .background-canvas {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+            }
+
+            .header {
+                padding: 1rem;
+                background: rgba(10, 10, 10, 0.8);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .header h1 {
+                margin: 0;
+                font-size: 1.5rem;
+                background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                text-shadow: 0 0 10px rgba(0, 255, 157, 0.3);
+            }
+
+            .main-content {
+                flex: 1;
+                display: grid;
+                grid-template-columns: 250px 1fr;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .sidebar {
+                background: rgba(10, 10, 10, 0.8);
+                backdrop-filter: blur(10px);
+                border-radius: 8px;
+                padding: 1rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .visualization-container {
+                background: rgba(10, 10, 10, 0.8);
+                backdrop-filter: blur(10px);
+                border-radius: 8px;
+                padding: 1rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .stats-panel {
+                margin-top: 1rem;
+            }
+
+            .stat-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.5rem;
+                margin-bottom: 0.5rem;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 4px;
+                transition: all 0.3s ease;
+            }
+
+            .stat-item:hover {
+                background: rgba(255, 255, 255, 0.1);
+                transform: translateX(5px);
+            }
+
+            .view-selector {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .view-button {
+                padding: 0.5rem;
+                background: rgba(255, 255, 255, 0.05);
+                border: none;
+                border-radius: 4px;
+                color: var(--text-color);
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .view-button:hover {
+                background: rgba(255, 255, 255, 0.1);
+                transform: translateX(5px);
+            }
+
+            .view-button.active {
+                background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+                color: var(--background-color);
+            }
+
+            .loading-screen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: var(--background-color);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+
+            .loading-content {
+                text-align: center;
+            }
+
+            .loading-spinner {
+                width: 50px;
+                height: 50px;
+                border: 3px solid rgba(255, 255, 255, 0.1);
+                border-top-color: var(--primary-color);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+
+            .mouse-trail {
+                position: fixed;
+                width: 20px;
+                height: 20px;
+                background: radial-gradient(circle, var(--primary-color) 0%, transparent 70%);
+                border-radius: 50%;
+                pointer-events: none;
+                opacity: 0.5;
+                z-index: 9999;
+            }
         </style>
     </head>
     <body>
-        <div id="root"></div>
+        <canvas class="background-canvas" id="background"></canvas>
+        <div class="mouse-trail" id="mouse-trail"></div>
+        <div id="root">
+            <div class="header">
+                <h1>SCode Analyzer</h1>
+            </div>
+            <div class="main-content">
+                <div class="sidebar">
+                    <div class="view-selector">
+                        <button class="view-button active" data-view="ast">AST Visualization</button>
+                        <button class="view-button" data-view="modules">Modules</button>
+                        <button class="view-button" data-view="vulnerabilities">Vulnerabilities</button>
+                    </div>
+                    <div class="stats-panel">
+                        <div class="stat-item">
+                            <span class="stat-label">Functions</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Modules</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Vulnerabilities</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="visualization-container">
+                    <div id="canvas-container"></div>
+                </div>
+            </div>
+        </div>
+
         <script>
             window.vscode = acquireVsCodeApi();
             window.projectDir = "${projectDir}";
+
+            // Mouse trail effect
+            const mouseTrail = document.getElementById('mouse-trail');
+            let mouseX = 0;
+            let mouseY = 0;
+            let trailX = 0;
+            let trailY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+
+            function animate() {
+                const dx = mouseX - trailX;
+                const dy = mouseY - trailY;
+                trailX += dx * 0.1;
+                trailY += dy * 0.1;
+                mouseTrail.style.left = trailX + 'px';
+                mouseTrail.style.top = trailY + 'px';
+                requestAnimationFrame(animate);
+            }
+            animate();
+
+            // Background shader
+            const canvas = document.getElementById('background');
+            const gl = canvas.getContext('webgl');
+            
+            const vertexShader = \`
+                attribute vec2 position;
+                void main() {
+                    gl_Position = vec4(position, 0.0, 1.0);
+                }
+            \`;
+
+            const fragmentShader = \`
+                precision highp float;
+                uniform float time;
+                uniform vec2 resolution;
+                
+                void main() {
+                    vec2 uv = gl_FragCoord.xy / resolution.xy;
+                    vec3 color = vec3(0.0);
+                    
+                    // Create a grid pattern
+                    float grid = 0.0;
+                    grid += sin(uv.x * 50.0 + time) * 0.1;
+                    grid += sin(uv.y * 50.0 + time) * 0.1;
+                    
+                    // Add some noise
+                    float noise = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
+                    noise = noise * 0.1;
+                    
+                    // Combine effects
+                    color = vec3(grid + noise);
+                    
+                    // Add a subtle gradient
+                    color += vec3(0.1, 0.2, 0.3) * (1.0 - uv.y);
+                    
+                    gl_FragColor = vec4(color, 0.1);
+                }
+            \`;
+
+            function initShader() {
+                const vertexShaderObj = gl.createShader(gl.VERTEX_SHADER);
+                gl.shaderSource(vertexShaderObj, vertexShader);
+                gl.compileShader(vertexShaderObj);
+
+                const fragmentShaderObj = gl.createShader(gl.FRAGMENT_SHADER);
+                gl.shaderSource(fragmentShaderObj, fragmentShader);
+                gl.compileShader(fragmentShaderObj);
+
+                const program = gl.createProgram();
+                gl.attachShader(program, vertexShaderObj);
+                gl.attachShader(program, fragmentShaderObj);
+                gl.linkProgram(program);
+                gl.useProgram(program);
+
+                const positionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                    -1, -1,
+                    1, -1,
+                    -1, 1,
+                    1, 1
+                ]), gl.STATIC_DRAW);
+
+                const positionLocation = gl.getAttribLocation(program, 'position');
+                gl.enableVertexAttribArray(positionLocation);
+                gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+                const timeLocation = gl.getUniformLocation(program, 'time');
+                const resolutionLocation = gl.getUniformLocation(program, 'resolution');
+
+                function render(time) {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    gl.viewport(0, 0, canvas.width, canvas.height);
+                    
+                    gl.uniform1f(timeLocation, time * 0.001);
+                    gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+                    
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    requestAnimationFrame(render);
+                }
+                requestAnimationFrame(render);
+            }
+
+            initShader();
         </script>
         <script src="${bundleUri}"></script>
     </body>

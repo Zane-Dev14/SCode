@@ -107,7 +107,7 @@ def analyze():
 @app.route('/ast', methods=['GET'])
 def get_ast():
     """Get the AST for the analyzed project"""
-    output_file = os.path.join(os.path.dirname(__file__), "sample_project", "ast_output.json")
+    output_file = os.path.join(os.path.dirname(__file__), "sample_project", "extracted.json")
 
     if not os.path.exists(output_file):
         return jsonify({"error": "AST data not found"}), 404

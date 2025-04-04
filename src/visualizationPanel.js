@@ -13,10 +13,9 @@ class VisualizationPanel {
         this.disposables = [];
     }
 
-    createOrShow(analysisResult = null) {
+    createOrShow() {
         if (this.panel) {
             this.panel.reveal(vscode.ViewColumn.One);
-            this.update(analysisResult);
             return;
         }
 
@@ -33,7 +32,7 @@ class VisualizationPanel {
             }
         );
 
-        this.panel.webview.html = this.getWebviewContent(analysisResult);
+        this.panel.webview.html = this.getWebviewContent();
 
         // Handle messages from the webview
         this.panel.webview.onDidReceiveMessage(
@@ -66,13 +65,8 @@ class VisualizationPanel {
         );
     }
 
-    update(analysisResult) {
-        if (this.panel) {
-            this.panel.webview.postMessage({
-                command: 'update',
-                data: analysisResult
-            });
-        }
+    update() {
+        // No longer needed as data comes from API
     }
 
     openFile(filePath, line) {
@@ -85,7 +79,7 @@ class VisualizationPanel {
         });
     }
 
-    getWebviewContent(analysisResult) {
+    getWebviewContent() {
         const mediaPath = path.join(this.context.extensionPath, 'media');
         const mainJsPath = vscode.Uri.file(path.join(mediaPath, 'main.js'))
             .with({ scheme: 'vscode-resource' });
@@ -136,15 +130,15 @@ class VisualizationPanel {
                                 <div class="stats-panel">
                                     <div class="stat-item">
                                         <span class="stat-label">Functions</span>
-                                        <span class="stat-value">${analysisResult?.functions?.length || 0}</span>
+                                        <span class="stat-value">0</span>
                                     </div>
                                     <div class="stat-item">
                                         <span class="stat-label">Modules</span>
-                                        <span class="stat-value">${analysisResult?.modules?.length || 0}</span>
+                                        <span class="stat-value">0</span>
                                     </div>
                                     <div class="stat-item">
                                         <span class="stat-label">Vulnerabilities</span>
-                                        <span class="stat-value">${analysisResult?.vulnerabilities?.length || 0}</span>
+                                        <span class="stat-value">0</span>
                                     </div>
                                 </div>
                             </div>
@@ -157,8 +151,81 @@ class VisualizationPanel {
 
                 <script nonce="${nonce}">
                     const vscode = acquireVsCodeApi();
-                    const analysisData = ${JSON.stringify(analysisResult || {})};
                     const shadersPath = "${shadersPath}";
+                    
+                    // Fetch data from API
+                    fetch('http://localhost:5000/ast')
+                        .then(response => response.json())
+                        .then(data => {
+                            // Map API data to visualization format
+                            const visualizationData = {
+                                functions: data.functions?.map(func => ({
+                                    id: func.id,
+                                    name: func.name,
+                                    file: func.file,
+                                    line: func.line,
+                                    parameters: func.parameters || [],
+                                    depth: func.depth,
+                                    calls: func.calls || [],
+                                    expanded: false,
+                                    nodeType: 'function',
+                                    x: 0,
+                                    y: 0,
+                                    z: 0,
+                                    children: func.children?.map(child => ({
+                                        id: child.id,
+                                        target: child.target,
+                                        line: child.line,
+                                        tooltip: child.tooltip,
+                                        nodeType: 'call',
+                                        expanded: false,
+                                        x: 0,
+                                        y: 0,
+                                        z: 0,
+                                        count: child.count || 1
+                                    })) || []
+                                })) || [],
+                                modules: data.modules?.map(module => ({
+                                    name: module,
+                                    path: module
+                                })) || [],
+                                vulnerabilities: data.vulnerabilities?.map(vuln => ({
+                                    id: vuln.id,
+                                    description: vuln.description,
+                                    node_id: vuln.node_id,
+                                    file: vuln.file,
+                                    line: vuln.line,
+                                    depth: vuln.depth
+                                })) || [],
+                                variables: data.variables?.map(var => ({
+                                    id: var.id,
+                                    name: var.name,
+                                    file: var.file,
+                                    line: var.line,
+                                    function: var.function,
+                                    depth: var.depth
+                                })) || [],
+                                dataflow: data.dataflow || []
+                            };
+
+                            // Update stats
+                            document.querySelector('.stat-item:nth-child(1) .stat-value').textContent = visualizationData.functions.length;
+                            document.querySelector('.stat-item:nth-child(2) .stat-value').textContent = visualizationData.modules.length;
+                            document.querySelector('.stat-item:nth-child(3) .stat-value').textContent = visualizationData.vulnerabilities.length;
+                            
+                            // Send mapped data to visualization
+                            vscode.postMessage({
+                                command: 'showAnalysis',
+                                data: visualizationData
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Failed to fetch data:', error);
+                            vscode.postMessage({
+                                command: 'error',
+                                error: 'Failed to fetch data from API'
+                            });
+                        });
                 </script>
                 <script src="${mainJsPath}"></script>
             </body>

@@ -163,34 +163,66 @@ async function runAnalysis(rootPath, panel) {
       progress: 20 
     });
 
-    // Mock data for testing
-    const mockData = {
-      modules: [
-        { name: 'Module 1', path: '/path/to/module1' },
-        { name: 'Module 2', path: '/path/to/module2' }
-      ],
-      functions: [
-        { name: 'function1', path: '/path/to/file1.js', line: 10 },
-        { name: 'function2', path: '/path/to/file2.js', line: 20 }
-      ],
-      vulnerabilities: [
-        { name: 'XSS', path: '/path/to/file1.js', line: 15, severity: 'high' },
-        { name: 'SQL Injection', path: '/path/to/file2.js', line: 25, severity: 'critical' }
-      ],
-      variables: [
-        { name: 'var1', type: 'string', value: 'test' },
-        { name: 'var2', type: 'number', value: '42' }
-      ]
+    // Fetch data from API
+    const response = await fetch('http://localhost:5000/ast');
+    const data = await response.json();
+
+    // Map API data to visualization format
+    const visualizationData = {
+      modules: data.modules ? data.modules.map(module => {
+        return {
+          name: module.split('::').pop() || module,
+          path: module
+        };
+      }) : [],
+      
+      functions: data.functions ? data.functions.map(func => {
+        return {
+          name: func.name,
+          path: func.file,
+          line: func.line,
+          parameters: func.parameters || [],
+          calls: func.calls || [],
+          depth: func.depth,
+          children: func.children ? func.children.map(child => {
+            return {
+              target: child.target,
+              line: child.line,
+              tooltip: child.tooltip
+            };
+          }) : []
+        };
+      }) : [],
+      
+      vulnerabilities: data.vulnerabilities ? data.vulnerabilities.map(vuln => {
+        return {
+          name: vuln.description.split(':')[0] || 'Vulnerability',
+          path: vuln.file,
+          line: vuln.line,
+          severity: vuln.depth > 5 ? 'critical' : vuln.depth > 3 ? 'high' : 'medium',
+          description: vuln.description
+        };
+      }) : [],
+      
+      variables: data.variables ? data.variables.map(v => {
+        return {
+          name: v.name,
+          path: v.file,
+          line: v.line,
+          function: v.function,
+          depth: v.depth
+        };
+      }) : []
     };
 
-    // Send mock data
+    // Send mapped data
     panel.webview.postMessage({ 
       type: 'fromExtension', 
       command: 'showAnalysis', 
-      data: mockData 
+      data: visualizationData 
     });
     
-    return mockData;
+    return visualizationData;
   } catch (error) {
     console.error('Error in analysis:', error);
     throw error;

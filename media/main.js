@@ -143,7 +143,7 @@ function handleExtensionMessage(message) {
         case 'analyze':
             if (state.appState !== 'startup') {
                 state.loading = true;
-                state.progress = 100; // Set to 100 immediately
+                state.progress = 100;
                 state.appState = 'loading';
                 updateUI();
             }
@@ -151,21 +151,24 @@ function handleExtensionMessage(message) {
         case 'showAnalysis':
             // Store data and ensure startup animation plays
             state.analysisData = message.data;
-            state.visualizationData = message.data;
+            state.visualizationData = {
+                functions: message.data.functions || [],
+                modules: message.data.modules || [],
+                vulnerabilities: message.data.vulnerabilities || [],
+                dataflow: message.data.dataflow || [],
+                variables: message.data.variables || []
+            };
             
             // If we're in startup, let it complete first
             if (state.appState === 'startup') {
-                // The startup animation will trigger loading state when done
                 return;
             }
             
-            // Otherwise show loading at 100% briefly
             state.progress = 100;
             state.loading = true;
             state.appState = 'loading';
             updateUI();
             
-            // Wait for loading screen to show 100% before transitioning
             setTimeout(() => {
                 state.loading = false;
                 state.appState = 'visualization';
@@ -173,21 +176,17 @@ function handleExtensionMessage(message) {
             }, 100);
             break;
         case 'updateProgress':
-            // Always show 100%
             state.progress = 100;
             if (currentViewUpdater && typeof currentViewUpdater.updateProgress === 'function') {
                 currentViewUpdater.updateProgress(100);
             }
             
-            // Wait 5 seconds then transition to visualization
             setTimeout(() => {
-                // Clear everything
                 const root = document.getElementById('root');
                 while (root.firstChild) {
                     root.removeChild(root.firstChild);
                 }
                 
-                // Show visualization
                 state.appState = 'visualization';
                 state.loading = false;
                 updateUI();

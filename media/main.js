@@ -283,372 +283,265 @@ function initVisualizationPanel(root, data) {
     // Clear previous content
     root.innerHTML = '';
 
-    // Create main container with gradient background
+    // Create main container
     const container = document.createElement('div');
     container.style.width = '100%';
     container.style.height = '100%';
-    container.style.position = 'relative';
     container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.background = 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)';
+    container.style.padding = '20px';
+    container.style.gap = '20px';
+    container.style.background = '#1e1e1e';
     root.appendChild(container);
-
-    // Initialize background effects
-    const background = initShaderBackground(container);
-    const particles = initParticleSystem(background.scene);
-    const d3Bg = initD3Background(container);
-
-    // Create header
-    const header = document.createElement('div');
-    header.style.padding = '20px';
-    header.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
-    container.appendChild(header);
-
-    const title = document.createElement('h1');
-    title.textContent = 'SCode Analysis Dashboard';
-    title.style.color = 'white';
-    title.style.margin = '0';
-    title.style.fontSize = '24px';
-    title.style.fontWeight = '500';
-    header.appendChild(title);
-
-    const stats = document.createElement('div');
-    stats.style.display = 'flex';
-    stats.style.gap = '20px';
-    header.appendChild(stats);
-
-    const statItems = [
-        { label: 'Modules', value: data?.modules?.length || 0, color: '#4A9EFF' },
-        { label: 'Functions', value: data?.functions?.length || 0, color: '#FFB74D' },
-        { label: 'Vulnerabilities', value: data?.vulnerabilities?.length || 0, color: '#FF5252' },
-        { label: 'Variables', value: data?.variables?.length || 0, color: '#66BB6A' }
-    ];
-
-    statItems.forEach(item => {
-        const stat = document.createElement('div');
-        stat.style.display = 'flex';
-        stat.style.flexDirection = 'column';
-        stat.style.alignItems = 'center';
-        
-        const value = document.createElement('div');
-        value.textContent = item.value;
-        value.style.color = item.color;
-        value.style.fontSize = '24px';
-        value.style.fontWeight = 'bold';
-        
-        const label = document.createElement('div');
-        label.textContent = item.label;
-        label.style.color = 'rgba(255, 255, 255, 0.7)';
-        label.style.fontSize = '14px';
-        
-        stat.appendChild(value);
-        stat.appendChild(label);
-        stats.appendChild(stat);
-    });
-
-    // Create main content area
-    const contentArea = document.createElement('div');
-    contentArea.style.display = 'flex';
-    contentArea.style.flex = '1';
-    contentArea.style.overflow = 'hidden';
-    container.appendChild(contentArea);
 
     // Create sidebar
     const sidebar = document.createElement('div');
-    sidebar.style.width = '250px';
-    sidebar.style.backgroundColor = 'rgba(30, 30, 30, 0.8)';
-    sidebar.style.padding = '20px';
-    sidebar.style.display = 'flex';
-    sidebar.style.flexDirection = 'column';
-    sidebar.style.gap = '10px';
-    contentArea.appendChild(sidebar);
+    sidebar.style.width = '200px';
+    sidebar.style.backgroundColor = '#252526';
+    sidebar.style.padding = '15px';
+    sidebar.style.borderRadius = '8px';
+    container.appendChild(sidebar);
 
-    // Create main panel
-    const mainPanel = document.createElement('div');
-    mainPanel.style.flex = '1';
-    mainPanel.style.backgroundColor = 'rgba(30, 30, 30, 0.8)';
-    mainPanel.style.margin = '20px';
-    mainPanel.style.borderRadius = '10px';
-    mainPanel.style.overflow = 'hidden';
-    contentArea.appendChild(mainPanel);
+    // Create main content area
+    const mainContent = document.createElement('div');
+    mainContent.style.flex = '1';
+    mainContent.style.backgroundColor = '#252526';
+    mainContent.style.padding = '20px';
+    mainContent.style.borderRadius = '8px';
+    mainContent.style.overflow = 'auto';
+    container.appendChild(mainContent);
 
-    // Navigation buttons
+    // Create navigation buttons
     const sections = [
-        { 
-            name: 'Modules', 
-            icon: '📦', 
-            color: '#4A9EFF',
-            description: 'Project modules and their dependencies'
-        },
-        { 
-            name: 'Functions', 
-            icon: '🔧', 
-            color: '#FFB74D',
-            description: 'Function calls and data flow analysis'
-        },
-        { 
-            name: 'Vulnerabilities', 
-            icon: '⚠️', 
-            color: '#FF5252',
-            description: 'Security vulnerabilities and risks'
-        },
-        { 
-            name: 'Variables', 
-            icon: '📊', 
-            color: '#66BB6A',
-            description: 'Variable usage and data types'
-        }
+        { name: 'Modules', icon: '📦', render: renderModules },
+        { name: 'Functions', icon: '🔧', render: renderFunctions },
+        { name: 'Vulnerabilities', icon: '⚠️', render: renderVulnerabilities },
+        { name: 'Variables', icon: '📊', render: renderVariables }
     ];
 
-    const contentSections = [];
-    let activeSection = 0;
-
     sections.forEach((section, index) => {
-        // Create navigation button
         const button = document.createElement('button');
-        button.style.display = 'flex';
-        button.style.alignItems = 'center';
-        button.style.gap = '10px';
         button.style.width = '100%';
-        button.style.padding = '15px';
+        button.style.padding = '10px';
+        button.style.marginBottom = '10px';
         button.style.border = 'none';
-        button.style.borderRadius = '8px';
-        button.style.backgroundColor = index === 0 ? section.color + '20' : 'transparent';
+        button.style.borderRadius = '4px';
+        button.style.backgroundColor = index === 0 ? '#37373d' : '#2d2d2d';
         button.style.color = 'white';
         button.style.cursor = 'pointer';
-        button.style.transition = 'all 0.3s';
-        button.style.textAlign = 'left';
+        button.style.display = 'flex';
+        button.style.alignItems = 'center';
+        button.style.gap = '8px';
+        button.innerHTML = `${section.icon} ${section.name}`;
         
-        const icon = document.createElement('span');
-        icon.textContent = section.icon;
-        icon.style.fontSize = '20px';
-        
-        const text = document.createElement('div');
-        text.style.display = 'flex';
-        text.style.flexDirection = 'column';
-        
-        const name = document.createElement('span');
-        name.textContent = section.name;
-        name.style.fontWeight = 'bold';
-        
-        const desc = document.createElement('span');
-        desc.textContent = section.description;
-        desc.style.fontSize = '12px';
-        desc.style.opacity = '0.7';
-        
-        text.appendChild(name);
-        text.appendChild(desc);
-        
-        button.appendChild(icon);
-        button.appendChild(text);
-        sidebar.appendChild(button);
-
-        // Create content section
-        const content = document.createElement('div');
-        content.style.display = index === 0 ? 'block' : 'none';
-        content.style.padding = '20px';
-        content.style.height = '100%';
-        content.style.overflow = 'auto';
-        mainPanel.appendChild(content);
-        contentSections.push(content);
-
-        // Add click handler
-        button.addEventListener('click', () => {
-            activeSection = index;
-            contentSections.forEach((c, i) => {
-                c.style.display = i === index ? 'block' : 'none';
-                sidebar.children[i].style.backgroundColor = i === index ? sections[i].color + '20' : 'transparent';
-            });
+        button.addEventListener('mouseover', () => {
+            if (button.style.backgroundColor !== '#37373d') {
+                button.style.backgroundColor = '#333333';
+            }
         });
+        
+        button.addEventListener('mouseout', () => {
+            if (button.style.backgroundColor !== '#37373d') {
+                button.style.backgroundColor = '#2d2d2d';
+            }
+        });
+        
+        button.addEventListener('click', () => {
+            // Reset all buttons
+            sidebar.querySelectorAll('button').forEach(btn => {
+                btn.style.backgroundColor = '#2d2d2d';
+            });
+            
+            // Highlight clicked button
+            button.style.backgroundColor = '#37373d';
+            
+            // Clear and update content
+            mainContent.innerHTML = '';
+            section.render(mainContent, data);
+        });
+        
+        sidebar.appendChild(button);
     });
 
-    // Modules Section
-    const modulesContent = contentSections[0];
-    if (data?.modules) {
-        const modulesGrid = document.createElement('div');
-        modulesGrid.style.display = 'grid';
-        modulesGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-        modulesGrid.style.gap = '20px';
-        modulesContent.appendChild(modulesGrid);
+    // Show first section by default
+    sidebar.querySelector('button').click();
 
-        data.modules.forEach(module => {
-            const moduleCard = document.createElement('div');
-            moduleCard.style.backgroundColor = 'rgba(74, 158, 255, 0.1)';
-            moduleCard.style.padding = '20px';
-            moduleCard.style.borderRadius = '8px';
-            moduleCard.style.color = 'white';
-            moduleCard.style.borderLeft = `4px solid ${sections[0].color}`;
-            
-            const name = document.createElement('div');
-            name.textContent = module;
-            name.style.fontWeight = 'bold';
-            name.style.fontSize = '18px';
-            name.style.marginBottom = '10px';
-            
-            const path = document.createElement('div');
-            path.textContent = module.split('/').pop();
-            path.style.opacity = '0.7';
-            path.style.fontSize = '14px';
-            
-            moduleCard.appendChild(name);
-            moduleCard.appendChild(path);
-            modulesGrid.appendChild(moduleCard);
-        });
-    }
-
-    // Functions Section
-    const functionsContent = contentSections[1];
-    const functionsContainer = document.createElement('div');
-    functionsContainer.style.width = '100%';
-    functionsContainer.style.height = '100%';
-    functionsContent.appendChild(functionsContainer);
-
-    // Initialize D3 force-directed graph
-    const svg = d3.select(functionsContainer)
-        .append('svg')
-        .attr('width', '100%')
-        .attr('height', '100%');
-
-    const simulation = d3.forceSimulation()
-        .force('link', d3.forceLink().id(d => d.id))
-        .force('charge', d3.forceManyBody().strength(-300))
-        .force('center', d3.forceCenter(functionsContainer.clientWidth / 2, functionsContainer.clientHeight / 2));
-
-    if (data?.dataflow) {
-        const link = svg.append('g')
-            .selectAll('line')
-            .data(data.dataflow)
-            .enter()
-            .append('line')
-            .attr('stroke', 'rgba(255, 183, 77, 0.3)')
-            .attr('stroke-width', 2);
-
-        if (data?.functions) {
-            const node = svg.append('g')
-                .selectAll('circle')
-                .data(data.functions)
-                .enter()
-                .append('circle')
-                .attr('r', 10)
-                .attr('fill', 'rgba(255, 183, 77, 0.8)');
-
-            simulation.nodes(data.functions).on('tick', () => {
-                link
-                    .attr('x1', d => d.source.x)
-                    .attr('y1', d => d.source.y)
-                    .attr('x2', d => d.target.x)
-                    .attr('y2', d => d.target.y);
-
-                node
-                    .attr('cx', d => d.x)
-                    .attr('cy', d => d.y);
-            });
+    return {
+        cleanup: () => {
+            root.innerHTML = '';
         }
-    }
-
-    // Vulnerabilities Section
-    const vulnContent = contentSections[2];
-    if (data?.vulnerabilities) {
-        const vulnGrid = document.createElement('div');
-        vulnGrid.style.display = 'grid';
-        vulnGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(400px, 1fr))';
-        vulnGrid.style.gap = '20px';
-        vulnContent.appendChild(vulnGrid);
-
-        data.vulnerabilities.forEach(vuln => {
-            const vulnCard = document.createElement('div');
-            vulnCard.style.backgroundColor = 'rgba(255, 82, 82, 0.1)';
-            vulnCard.style.padding = '20px';
-            vulnCard.style.borderRadius = '8px';
-            vulnCard.style.color = 'white';
-            vulnCard.style.borderLeft = `4px solid ${sections[2].color}`;
-            
-            const header = document.createElement('div');
-            header.style.display = 'flex';
-            header.style.justifyContent = 'space-between';
-            header.style.alignItems = 'center';
-            header.style.marginBottom = '15px';
-            
-            const title = document.createElement('div');
-            title.style.fontWeight = 'bold';
-            title.style.fontSize = '18px';
-            title.textContent = vuln.vulnerability || 'Security Issue';
-            
-            const line = document.createElement('div');
-            line.style.backgroundColor = 'rgba(255, 82, 82, 0.2)';
-            line.style.padding = '5px 10px';
-            line.style.borderRadius = '4px';
-            line.style.fontSize = '14px';
-            line.textContent = `Line ${vuln.line}`;
-            
-            header.appendChild(title);
-            header.appendChild(line);
-            
-            const file = document.createElement('div');
-            file.style.marginBottom = '10px';
-            file.style.opacity = '0.7';
-            file.textContent = vuln.file.split('/').pop();
-            
-            const desc = document.createElement('div');
-            desc.style.opacity = '0.8';
-            desc.textContent = vuln.description;
-            
-            vulnCard.appendChild(header);
-            vulnCard.appendChild(file);
-            vulnCard.appendChild(desc);
-            vulnGrid.appendChild(vulnCard);
-        });
-    }
-
-    // Variables Section
-    const varsContent = contentSections[3];
-    if (data?.variables) {
-        const varsGrid = document.createElement('div');
-        varsGrid.style.display = 'grid';
-        varsGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-        varsGrid.style.gap = '20px';
-        varsContent.appendChild(varsGrid);
-
-        data.variables.forEach(variable => {
-            const varCard = document.createElement('div');
-            varCard.style.backgroundColor = 'rgba(102, 187, 106, 0.1)';
-            varCard.style.padding = '20px';
-            varCard.style.borderRadius = '8px';
-            varCard.style.color = 'white';
-            varCard.style.borderLeft = `4px solid ${sections[3].color}`;
-            
-            const name = document.createElement('div');
-            name.style.fontWeight = 'bold';
-            name.style.fontSize = '18px';
-            name.style.marginBottom = '10px';
-            name.textContent = variable.name;
-            
-            const type = document.createElement('div');
-            type.style.marginBottom = '5px';
-            type.style.opacity = '0.8';
-            type.textContent = `Type: ${variable.type}`;
-            
-            const value = document.createElement('div');
-            value.style.opacity = '0.8';
-            value.textContent = `Value: ${variable.value}`;
-            
-            varCard.appendChild(name);
-            varCard.appendChild(type);
-            varCard.appendChild(value);
-            varsGrid.appendChild(varCard);
-        });
-    }
-
-    // Cleanup function
-    const cleanup = () => {
-        if (typeof background.cleanup === 'function') background.cleanup();
-        if (typeof d3Bg.cleanup === 'function') d3Bg.cleanup();
     };
+}
 
-    return { cleanup };
+function renderModules(container, data) {
+    const header = document.createElement('h2');
+    header.textContent = 'Modules';
+    header.style.margin = '0 0 20px 0';
+    container.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(250px, 1fr))';
+    grid.style.gap = '15px';
+    container.appendChild(grid);
+
+    data?.modules?.forEach(module => {
+        const card = document.createElement('div');
+        card.style.backgroundColor = '#333333';
+        card.style.padding = '15px';
+        card.style.borderRadius = '6px';
+        card.style.border = '1px solid #404040';
+
+        const name = document.createElement('div');
+        name.textContent = module.name;
+        name.style.fontSize = '16px';
+        name.style.fontWeight = 'bold';
+        name.style.marginBottom = '8px';
+
+        const path = document.createElement('div');
+        path.textContent = module.path;
+        path.style.fontSize = '12px';
+        path.style.color = '#888';
+
+        card.appendChild(name);
+        card.appendChild(path);
+        grid.appendChild(card);
+    });
+}
+
+function renderFunctions(container, data) {
+    const header = document.createElement('h2');
+    header.textContent = 'Functions';
+    header.style.margin = '0 0 20px 0';
+    container.appendChild(header);
+
+    const list = document.createElement('div');
+    list.style.display = 'flex';
+    list.style.flexDirection = 'column';
+    list.style.gap = '10px';
+    container.appendChild(list);
+
+    data?.functions?.forEach(func => {
+        const item = document.createElement('div');
+        item.style.backgroundColor = '#333333';
+        item.style.padding = '15px';
+        item.style.borderRadius = '6px';
+        item.style.border = '1px solid #404040';
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+
+        const info = document.createElement('div');
+        
+        const name = document.createElement('div');
+        name.textContent = func.name;
+        name.style.fontSize = '16px';
+        name.style.fontWeight = 'bold';
+        name.style.marginBottom = '4px';
+
+        const location = document.createElement('div');
+        location.textContent = `${func.path}:${func.line}`;
+        location.style.fontSize = '12px';
+        location.style.color = '#888';
+
+        info.appendChild(name);
+        info.appendChild(location);
+        item.appendChild(info);
+        list.appendChild(item);
+    });
+}
+
+function renderVulnerabilities(container, data) {
+    const header = document.createElement('h2');
+    header.textContent = 'Vulnerabilities';
+    header.style.margin = '0 0 20px 0';
+    container.appendChild(header);
+
+    const list = document.createElement('div');
+    list.style.display = 'flex';
+    list.style.flexDirection = 'column';
+    list.style.gap = '10px';
+    container.appendChild(list);
+
+    data?.vulnerabilities?.forEach(vuln => {
+        const item = document.createElement('div');
+        item.style.backgroundColor = '#333333';
+        item.style.padding = '15px';
+        item.style.borderRadius = '6px';
+        item.style.border = '1px solid #404040';
+
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        header.style.marginBottom = '8px';
+
+        const name = document.createElement('div');
+        name.textContent = vuln.name;
+        name.style.fontSize = '16px';
+        name.style.fontWeight = 'bold';
+
+        const severity = document.createElement('div');
+        severity.textContent = vuln.severity;
+        severity.style.padding = '4px 8px';
+        severity.style.borderRadius = '4px';
+        severity.style.fontSize = '12px';
+        severity.style.backgroundColor = vuln.severity === 'high' ? '#cf6679' : '#ff4081';
+
+        header.appendChild(name);
+        header.appendChild(severity);
+
+        const location = document.createElement('div');
+        location.textContent = `${vuln.path}:${vuln.line}`;
+        location.style.fontSize = '12px';
+        location.style.color = '#888';
+
+        item.appendChild(header);
+        item.appendChild(location);
+        list.appendChild(item);
+    });
+}
+
+function renderVariables(container, data) {
+    const header = document.createElement('h2');
+    header.textContent = 'Variables';
+    header.style.margin = '0 0 20px 0';
+    container.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+    grid.style.gap = '15px';
+    container.appendChild(grid);
+
+    data?.variables?.forEach(variable => {
+        const card = document.createElement('div');
+        card.style.backgroundColor = '#333333';
+        card.style.padding = '15px';
+        card.style.borderRadius = '6px';
+        card.style.border = '1px solid #404040';
+
+        const name = document.createElement('div');
+        name.textContent = variable.name;
+        name.style.fontSize = '16px';
+        name.style.fontWeight = 'bold';
+        name.style.marginBottom = '8px';
+
+        const type = document.createElement('div');
+        type.textContent = `Type: ${variable.type}`;
+        type.style.fontSize = '12px';
+        type.style.color = '#888';
+        type.style.marginBottom = '4px';
+
+        const value = document.createElement('div');
+        value.textContent = `Value: ${variable.value}`;
+        value.style.fontSize = '12px';
+        value.style.color = '#888';
+
+        card.appendChild(name);
+        card.appendChild(type);
+        card.appendChild(value);
+        grid.appendChild(card);
+    });
 }
 
 // REMOVED OBSOLETE WEBGL VISUALIZATION CODE BLOCK

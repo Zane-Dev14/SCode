@@ -127,46 +127,72 @@ async function analyzeProject(panel) {
 
     const rootPath = workspaceFolders[0].uri.fsPath;
 
-    // Send progress updates
-    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 10 });
+    // Send initial loading state
+    panel.webview.postMessage({ 
+      type: 'fromExtension', 
+      command: 'load' 
+    });
+
+    // Run analysis
     const result = await runAnalysis(rootPath, panel);
     
-    // Send final progress and analysis data
-    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 100 });
-    panel.webview.postMessage({ type: 'fromExtension', command: 'showAnalysis', data: result });
+    // Send analysis data
+    panel.webview.postMessage({ 
+      type: 'fromExtension', 
+      command: 'showAnalysis', 
+      data: result 
+    });
     
     return result;
   } catch (error) {
-    vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
+    panel.webview.postMessage({ 
+      type: 'fromExtension', 
+      command: 'error', 
+      error: error.message 
+    });
     throw error;
   }
 }
 
 async function runAnalysis(rootPath, panel) {
   try {
-    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 20 });
-    const response = await fetch('http://localhost:5000/analyze', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        project_dir: rootPath,
-      }),
+    // Send progress update
+    panel.webview.postMessage({ 
+      type: 'fromExtension', 
+      command: 'updateProgress', 
+      progress: 20 
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    // Mock data for testing
+    const mockData = {
+      modules: [
+        { name: 'Module 1', path: '/path/to/module1' },
+        { name: 'Module 2', path: '/path/to/module2' }
+      ],
+      functions: [
+        { name: 'function1', path: '/path/to/file1.js', line: 10 },
+        { name: 'function2', path: '/path/to/file2.js', line: 20 }
+      ],
+      vulnerabilities: [
+        { name: 'XSS', path: '/path/to/file1.js', line: 15, severity: 'high' },
+        { name: 'SQL Injection', path: '/path/to/file2.js', line: 25, severity: 'critical' }
+      ],
+      variables: [
+        { name: 'var1', type: 'string', value: 'test' },
+        { name: 'var2', type: 'number', value: '42' }
+      ]
+    };
 
-    const data = await response.json();
+    // Send mock data
+    panel.webview.postMessage({ 
+      type: 'fromExtension', 
+      command: 'showAnalysis', 
+      data: mockData 
+    });
     
-    // Send analysis data immediately
-    panel.webview.postMessage({ type: 'fromExtension', command: 'showAnalysis', data: data });
-    
-    return data;
+    return mockData;
   } catch (error) {
-    console.error('Error fetching analysis:', error);
+    console.error('Error in analysis:', error);
     throw error;
   }
 }
@@ -177,89 +203,24 @@ function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src ${webview.cspSource} ws: wss:; img-src ${webview.cspSource} https: data:; script-src ${webview.cspSource} 'unsafe-eval' 'unsafe-inline' blob:; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; worker-src blob:;">
-        <title>Code Visualization</title>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src ${webview.cspSource} ws: wss:; img-src ${webview.cspSource} https: data:; script-src ${webview.cspSource} 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com blob:; style-src ${webview.cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com; font-src ${webview.cspSource} https://cdnjs.cloudflare.com; worker-src blob:;">
+        <title>SCode Analyzer</title>
         <link href="${stylesUri}" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.0.0/d3.min.js"></script>
         <style>
-            body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #1e1e1e; color: white; font-family: monospace; }
+            body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #1e1e1e; color: white; font-family: system-ui, -apple-system, sans-serif; }
             #root { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-            .debug-info { position: fixed; top: 10px; left: 10px; color: white; font-family: monospace; z-index: 1000; }
-            .data-display { position: fixed; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.8); padding: 10px; border-radius: 5px; max-width: 80%; max-height: 80%; overflow: auto; z-index: 1000; }
-            .data-display pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; }
+            .debug-info { display: none; }
         </style>
     </head>
     <body>
         <div id="root"></div>
-        
-        <div class="debug-info"></div>
         <script>
             window.vscode = acquireVsCodeApi();
-            const debugInfo = document.querySelector('.debug-info');
-            const originalLog = console.log;
-            const originalError = console.error;
-
-            console.log = function(...args) {
-                const safeArgs = args.map(arg => {
-                    try {
-                        if (typeof arg === 'object') {
-                            const seen = new WeakSet();
-                            return JSON.stringify(arg, function(key, value) {
-                                if (key === 'stateNode' || key === '__reactContainer$' || key === 'containerInfo') {
-                                    return '[Internal]';
-                                }
-                                if (value instanceof Element) {
-                                    return '[' + value.tagName + ']';
-                                }
-                                if (typeof value === 'function') {
-                                    return '[Function]';
-                                }
-                                if (typeof value === 'object' && value !== null) {
-                                    if (seen.has(value)) {
-                                        return '[Circular]';
-                                    }
-                                    seen.add(value);
-                                }
-                                return value;
-                            });
-                        }
-                        return arg;
-                    } catch (e) {
-                        return '[Circular Structure]';
-                    }
-                });
-                debugInfo.innerHTML += safeArgs.join(' ') + '<br>';
-                window.vscode.postMessage({ type: 'log', message: safeArgs.join(' ') });
-                originalLog.apply(console, safeArgs);
-            };
-
-            console.error = function(...args) {
-                const safeArgs = args.map(arg => {
-                    try {
-                        return typeof arg === 'object' ? JSON.stringify(arg) : arg;
-                    } catch (e) {
-                        return '[Circular Structure]';
-                    }
-                });
-                debugInfo.innerHTML += '<span style="color: red;">' + safeArgs.join(' ') + '</span><br>';
-                window.vscode.postMessage({ type: 'error', message: safeArgs.join(' ') });
-                originalError.apply(console, args);
-            };
-
-            window.addEventListener('error', function(event) {
-                console.error('Error:', event.message, 'at', event.filename, ':', event.lineno);
-            });
-
-            const script = document.createElement('script');
-            script.src = '${bundleUri}';
-            script.onload = () => {
-                console.log('Bundle loaded successfully');
-                if (window.updateUI) window.updateUI();
-            };
-            script.onerror = (error) => {
-                console.error('Failed to load bundle:', error);
-            };
-            document.body.appendChild(script);
+            window.projectDir = "${projectDir}";
         </script>
+        <script src="${bundleUri}"></script>
     </body>
     </html>`;
 }

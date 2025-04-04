@@ -130,7 +130,11 @@ async function analyzeProject(panel) {
     // Send progress updates
     panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 10 });
     const result = await runAnalysis(rootPath, panel);
+    
+    // Send final progress and analysis data
     panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 100 });
+    panel.webview.postMessage({ type: 'fromExtension', command: 'showAnalysis', data: result });
+    
     return result;
   } catch (error) {
     vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
@@ -155,8 +159,11 @@ async function runAnalysis(rootPath, panel) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    panel.webview.postMessage({ type: 'fromExtension', command: 'updateProgress', progress: 80 });
     const data = await response.json();
+    
+    // Send analysis data immediately
+    panel.webview.postMessage({ type: 'fromExtension', command: 'showAnalysis', data: data });
+    
     return data;
   } catch (error) {
     console.error('Error fetching analysis:', error);

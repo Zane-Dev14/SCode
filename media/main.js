@@ -124,33 +124,42 @@ window.addEventListener('message', function(event) {
 let currentCleanup = null;
 let currentViewUpdater = null;
 
+// Add a global timer reference
+let loadingTimer = null;
+
 // Handle extension messages
 function handleExtensionMessage(message) {
     switch (message.command) {
         case 'load':
         case 'analyze':
-            // If we receive load/analyze during startup, wait until startup finishes
             if (state.appState !== 'startup') {
                 state.loading = true;
-                state.progress = 0;
+                state.progress = 100; // Set to 100 immediately
                 state.appState = 'loading';
                 updateUI();
             }
             break;
         case 'showAnalysis':
-            if (state.appState !== 'startup') {
-                state.loading = false;
-                state.analysisData = message.data;
-                state.visualizationData = message.data;
+            // Store data and ensure loading screen shows 100%
+            state.analysisData = message.data;
+            state.visualizationData = message.data;
+            state.progress = 100;
+            state.loading = true;
+            state.appState = 'loading';
+            updateUI();
+            
+            // Wait for loading screen to show 100% before transitioning
+            setTimeout(() => {
                 state.appState = 'visualization';
+                state.loading = false;
                 updateUI();
-            }
+            }, 10000);
             break;
         case 'updateProgress':
-            state.progress = message.progress;
-            // Update progress only if the loading screen is the active state
-            if (state.appState === 'loading' && currentViewUpdater && typeof currentViewUpdater.updateProgress === 'function') {
-                currentViewUpdater.updateProgress(state.progress);
+            // Always show 100%
+            state.progress = 100;
+            if (currentViewUpdater && typeof currentViewUpdater.updateProgress === 'function') {
+                currentViewUpdater.updateProgress(100);
             }
             break;
         case 'error':
@@ -165,54 +174,49 @@ function handleExtensionMessage(message) {
 // Update UI based on state
 function updateUI() {
     const root = document.getElementById('root');
-    root.innerHTML = '';
-
-    // Call cleanup function for the previous view if it exists
+    
+    // Always cleanup previous view
     if (typeof currentCleanup === 'function') {
         currentCleanup();
         currentCleanup = null;
     }
-    currentViewUpdater = null; // Reset updater
+    currentViewUpdater = null;
 
-    if (state.error && state.appState !== 'startup') { // Don't show error during startup animation
+    // Clear root content
+    root.innerHTML = '';
+
+    if (state.error && state.appState !== 'startup') {
         showError(state.error);
         return;
     }
 
     switch (state.appState) {
         case 'startup':
-             console.log('Starting startup animation...');
-             const startup = initStartupAnimation(root, () => {
-                 console.log('Startup animation complete.');
-                 state.appState = 'loading'; // Transition to loading state
-                 updateUI(); // Render the loading screen
-                 // Request analysis from the extension
-                 window.vscode.postMessage({
-                     command: 'startAnalysis'
-                 });
-             });
-             currentCleanup = startup.cleanup;
-             break;
+            console.log('Starting startup animation...');
+            const startup = initStartupAnimation(root, () => {
+                console.log('Startup animation complete.');
+                state.appState = 'loading';
+                updateUI();
+                window.vscode.postMessage({
+                    command: 'startAnalysis'
+                });
+            });
+            currentCleanup = startup.cleanup;
+            break;
         case 'loading':
             console.log('Initializing loading screen...');
             const loadingUpdater = initLoadingScreen(root, state.progress);
-            currentViewUpdater = loadingUpdater; // Store the updater
-            break;
-        case 'entrypoint':
-            console.log('Initializing entrypoint selector...');
-            const entrypoint = initEntrypointSelector(root, state.analysisData, handleEntrypointSelect);
-            currentCleanup = entrypoint.cleanup; // Store cleanup function
+            currentViewUpdater = loadingUpdater;
             break;
         case 'visualization':
             console.log('Initializing visualization panel...');
             const visualization = initVisualizationPanel(root, state.visualizationData);
             currentCleanup = visualization.cleanup;
             break;
-         case 'error': // Handle error state explicitly if needed
-             showError(state.error || 'An unknown error occurred.');
-             break;
+        case 'error':
+            showError(state.error);
+            break;
     }
-    
 }
 
 // Show error message

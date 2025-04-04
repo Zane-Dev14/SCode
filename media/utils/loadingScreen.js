@@ -63,9 +63,9 @@ export function initLoadingScreen(root, currentProgress) {
     progressBar.style.overflow = 'hidden';
     loadingUI.appendChild(progressBar);
 
-    // Assign to module-level variable
+    // Progress fill - FORCE 100%
     progressFill = document.createElement('div');
-    progressFill.style.width = '0%'; // Start at 0
+    progressFill.style.width = '100%'; // Always 100%
     progressFill.style.height = '100%';
     progressFill.style.backgroundColor = '#4a9eff';
     progressFill.style.transition = 'width 0.3s ease';
@@ -78,27 +78,30 @@ export function initLoadingScreen(root, currentProgress) {
     loadingTextElement.textContent = 'Loading Visualization...';
     loadingUI.appendChild(loadingTextElement);
 
-    // Progress text
-    // Assign to module-level variable
+    // Progress text - FORCE 100%
     progressText = document.createElement('div');
     progressText.style.fontSize = '14px';
     progressText.style.opacity = '0.7';
-    progressText.textContent = '0%'; // Start at 0
+    progressText.textContent = '100%'; // Always 100%
     loadingUI.appendChild(progressText);
 
     // Start the animation loop
     function animateLoop() {
         animationFrameId = requestAnimationFrame(animateLoop);
         particles.update();
-        background.renderer.render(background.scene, background.camera); // Use returned renderer/scene/camera
+        background.renderer.render(background.scene, background.camera);
         d3Bg.update();
     }
-    background.animate(); // Start shader animation
-    animateLoop(); // Start combined loop
+    background.animate();
+    animateLoop();
 
-    // Set initial progress
-    updateProgress(currentProgress);
+    // Force 100% progress
+    updateProgress(100);
 
-    // Expose the updateProgress function for external updates
-    return { updateProgress };
+    // Return update function that always sets to 100%
+    return { 
+        updateProgress: () => {
+            updateProgress(100);
+        }
+    };
 } 

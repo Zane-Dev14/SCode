@@ -50,40 +50,19 @@ function showVisualization(analysis, context) {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   const projectDir = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : 'No workspace folder';
 
-  panel.webview.html = getWebviewContent(panel.webview, bundleUri, stylesUri, projectDir);
+  panel.webview.html = getWebviewContent(analysisData);
+
+  // Start analysis immediately
+  analyzeProject(panel).catch(error => {
+    console.error('Analysis failed:', error);
+  });
 
   panel.webview.onDidReceiveMessage(
     async (message) => {
-      console.log('Received message from webview:', message);
       switch (message.command) {
-        case 'startAnalysis':
-          try {
-            const analysisResult = await analyzeProject(panel);
-            panel.webview.postMessage({
-              type: 'fromExtension',
-              command: 'showAnalysis',
-              data: analysisResult,
-            });
-          } catch (error) {
-            panel.webview.postMessage({
-              type: 'fromExtension',
-              command: 'error',
-              error: error.message,
-            });
-          }
-          break;
-        case 'getAnalysis':
-          console.log('Sending analysis data to webview');
-          panel.webview.postMessage({
-            type: 'fromExtension',
-            command: 'analysis',
-            data: analysis,
-          });
-          break;
         case 'getShader':
           try {
             const shaderPath = path.join(__dirname, '..', 'media', message.path);
-            console.log('Loading shader from:', shaderPath);
             const shaderContent = fs.readFileSync(shaderPath, 'utf8');
             panel.webview.postMessage({
               command: 'shaderContent',
@@ -92,18 +71,7 @@ function showVisualization(analysis, context) {
             });
           } catch (error) {
             console.error(`Error loading shader: ${error.message}`);
-            panel.webview.postMessage({
-              command: 'shaderError',
-              path: message.path,
-              error: error.message,
-            });
           }
-          break;
-        case 'log':
-          console.log('Webview:', message.message);
-          break;
-        case 'error':
-          console.error('Webview error:', message.message);
           break;
       }
     },
@@ -126,14 +94,14 @@ async function analyzeProject(panel) {
   }
 }
 
-async function runAnalysis(rootPath, panel) {
+async function runAnalysis(projectDir, panel) {
   try {
     const response = await fetch('http://localhost:5000/analyze', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ project_dir: rootPath })
+      body: JSON.stringify({ project_dir: projectDir })
     });
 
     if (!response.ok) {
@@ -141,90 +109,92 @@ async function runAnalysis(rootPath, panel) {
     }
 
     const data = await response.json();
-    panel.webview.postMessage({ 
-      type: 'fromExtension', 
-      command: 'updateProgress', 
-      progress: 100 
-    });
+    
+    // Update webview with analysis data
+    panel.webview.html = getWebviewContent(data);
+    
     return data;
   } catch (error) {
+    console.error('Error during analysis:', error);
     throw error;
   }
 }
 
-function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
-  return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src ${webview.cspSource} ws: wss:; img-src ${webview.cspSource} https: data:; script-src ${webview.cspSource} 'unsafe-eval' 'unsafe-inline' blob:; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; worker-src blob:;">
-        <title>Code Visualization</title>
-        <link href="${stylesUri}" rel="stylesheet">
-        <style>
-            body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #1e1e1e; color: white; font-family: monospace; }
-            #root { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-            .debug-info { position: fixed; top: 10px; left: 10px; color: white; font-family: monospace; z-index: 1000; }
-            .data-display { position: fixed; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.8); padding: 10px; border-radius: 5px; max-width: 80%; max-height: 80%; overflow: auto; z-index: 1000; }
-            .data-display pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; }
-        </style>
-    </head>
-    <body>
-        <div id="root"></div>
-        <div class="data-display">
-            <h3>Project Directory:</h3>
-            <pre>${projectDir}</pre>
-        </div>
-        <div class="debug-info"></div>
-        <script>
-            window.vscode = acquireVsCodeApi();
-            const debugInfo = document.querySelector('.debug-info');
-            const originalLog = console.log;
-            const originalError = console.error;
+function getWebviewContent(analysisData) {
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                .container {
+                    padding: 20px;
+                    font-family: Arial, sans-serif;
+                }
+                .section {
+                    margin-bottom: 20px;
+                    border: 1px solid #ccc;
+                    padding: 15px;
+                    border-radius: 5px;
+                }
+                .section-title {
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                    color: #333;
+                }
+                .module-list, .function-list, .vulnerability-list {
+                    list-style-type: none;
+                    padding-left: 0;
+                }
+                .module-item, .function-item, .vulnerability-item {
+                    padding: 8px;
+                    margin: 5px 0;
+                    background: #f5f5f5;
+                    border-radius: 3px;
+                }
+                .vulnerability-item {
+                    color: #d32f2f;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="section">
+                    <div class="section-title">Modules Used</div>
+                    <ul class="module-list">
+                        ${analysisData.modules_used.map(module => `
+                            <li class="module-item">${module}</li>
+                        `).join('')}
+                    </ul>
+                </div>
 
-            console.log = function(...args) {
-                const safeArgs = args.map(arg => {
-                    try {
-                        return typeof arg === 'object' ? JSON.stringify(arg) : arg;
-                    } catch (e) {
-                        return '[Circular Structure]';
-                    }
-                });
-                debugInfo.innerHTML += safeArgs.join(' ') + '<br>';
-                window.vscode.postMessage({ type: 'log', message: safeArgs.join(' ') });
-                originalLog.apply(console, args);
-            };
+                <div class="section">
+                    <div class="section-title">Functions</div>
+                    <ul class="function-list">
+                        ${Object.entries(analysisData.function_map || {}).map(([name, func]) => `
+                            <li class="function-item">
+                                ${name} (${func.param_count} params)
+                                ${func.vulnerabilities ? `
+                                    <div style="color: #d32f2f;">
+                                        Vulnerabilities: ${func.vulnerabilities.join(', ')}
+                                    </div>
+                                ` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
 
-            console.error = function(...args) {
-                const safeArgs = args.map(arg => {
-                    try {
-                        return typeof arg === 'object' ? JSON.stringify(arg) : arg;
-                    } catch (e) {
-                        return '[Circular Structure]';
-                    }
-                });
-                debugInfo.innerHTML += '<span style="color: red;">' + safeArgs.join(' ') + '</span><br>';
-                window.vscode.postMessage({ type: 'error', message: safeArgs.join(' ') });
-                originalError.apply(console, args);
-            };
-
-            window.addEventListener('error', function(event) {
-                console.error('Error:', event.message, 'at', event.filename, ':', event.lineno);
-            });
-
-            const script = document.createElement('script');
-            script.src = '${bundleUri}';
-            script.onload = () => {
-                console.log('Bundle loaded successfully');
-                if (window.updateUI) window.updateUI();
-            };
-            script.onerror = (error) => {
-                console.error('Failed to load bundle:', error);
-            };
-            document.body.appendChild(script);
-        </script>
-    </body>
-    </html>`;
+                <div class="section">
+                    <div class="section-title">Vulnerabilities</div>
+                    <ul class="vulnerability-list">
+                        ${analysisData.vulnerabilities.map(vuln => `
+                            <li class="vulnerability-item">${vuln}</li>
+                        `).join('')}
+                    </ul>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
 }
 
 function deactivate() {

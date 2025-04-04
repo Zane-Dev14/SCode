@@ -35,6 +35,12 @@ const originalLog = console.log;
 const originalError = console.error;
 
 console.log = function(...args) {
+    // Filter out initialization messages
+    if (args[0]?.includes('Initializing application') || 
+        args[0]?.includes('Bundle loaded')) {
+        return;
+    }
+    
     const safeArgs = args.map(arg => {
         try {
             if (typeof arg === 'object') {
@@ -127,6 +133,9 @@ let currentViewUpdater = null;
 // Add a global timer reference
 let loadingTimer = null;
 
+// Add a flag to track if visualization is already being initialized
+let isInitializingVisualization = false;
+
 // Handle extension messages
 function handleExtensionMessage(message) {
     switch (message.command) {
@@ -214,9 +223,7 @@ function updateUI() {
 
     switch (state.appState) {
         case 'startup':
-            console.log('Starting startup animation...');
             const startup = initStartupAnimation(root, () => {
-                console.log('Startup animation complete.');
                 state.appState = 'loading';
                 state.progress = 100;
                 state.loading = true;
@@ -232,14 +239,16 @@ function updateUI() {
             currentCleanup = startup.cleanup;
             break;
         case 'loading':
-            console.log('Initializing loading screen...');
             const loadingUpdater = initLoadingScreen(root, state.progress);
             currentViewUpdater = loadingUpdater;
             break;
         case 'visualization':
-            console.log('Initializing visualization panel...');
-            const visualization = initVisualizationPanel(root, state.visualizationData);
-            currentCleanup = visualization.cleanup;
+            if (!isInitializingVisualization) {
+                isInitializingVisualization = true;
+                const visualization = initVisualizationPanel(root, state.visualizationData);
+                currentCleanup = visualization.cleanup;
+                isInitializingVisualization = false;
+            }
             break;
         case 'error':
             showError(state.error);
@@ -274,76 +283,369 @@ function initVisualizationPanel(root, data) {
     // Clear previous content
     root.innerHTML = '';
 
-    // Create main container
+    // Create main container with gradient background
     const container = document.createElement('div');
     container.style.width = '100%';
     container.style.height = '100%';
     container.style.position = 'relative';
     container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.background = 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)';
     root.appendChild(container);
+
+    // Initialize background effects
+    const background = initShaderBackground(container);
+    const particles = initParticleSystem(background.scene);
+    const d3Bg = initD3Background(container);
+
+    // Create header
+    const header = document.createElement('div');
+    header.style.padding = '20px';
+    header.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    container.appendChild(header);
+
+    const title = document.createElement('h1');
+    title.textContent = 'SCode Analysis Dashboard';
+    title.style.color = 'white';
+    title.style.margin = '0';
+    title.style.fontSize = '24px';
+    title.style.fontWeight = '500';
+    header.appendChild(title);
+
+    const stats = document.createElement('div');
+    stats.style.display = 'flex';
+    stats.style.gap = '20px';
+    header.appendChild(stats);
+
+    const statItems = [
+        { label: 'Modules', value: data?.modules?.length || 0, color: '#4A9EFF' },
+        { label: 'Functions', value: data?.functions?.length || 0, color: '#FFB74D' },
+        { label: 'Vulnerabilities', value: data?.vulnerabilities?.length || 0, color: '#FF5252' },
+        { label: 'Variables', value: data?.variables?.length || 0, color: '#66BB6A' }
+    ];
+
+    statItems.forEach(item => {
+        const stat = document.createElement('div');
+        stat.style.display = 'flex';
+        stat.style.flexDirection = 'column';
+        stat.style.alignItems = 'center';
+        
+        const value = document.createElement('div');
+        value.textContent = item.value;
+        value.style.color = item.color;
+        value.style.fontSize = '24px';
+        value.style.fontWeight = 'bold';
+        
+        const label = document.createElement('div');
+        label.textContent = item.label;
+        label.style.color = 'rgba(255, 255, 255, 0.7)';
+        label.style.fontSize = '14px';
+        
+        stat.appendChild(value);
+        stat.appendChild(label);
+        stats.appendChild(stat);
+    });
+
+    // Create main content area
+    const contentArea = document.createElement('div');
+    contentArea.style.display = 'flex';
+    contentArea.style.flex = '1';
+    contentArea.style.overflow = 'hidden';
+    container.appendChild(contentArea);
 
     // Create sidebar
     const sidebar = document.createElement('div');
-    sidebar.className = 'sidebar';
     sidebar.style.width = '250px';
-    sidebar.style.height = '100%';
-    sidebar.style.backgroundColor = '#1e1e1e';
-    sidebar.style.borderRight = '1px solid #333';
+    sidebar.style.backgroundColor = 'rgba(30, 30, 30, 0.8)';
     sidebar.style.padding = '20px';
-    sidebar.style.overflowY = 'auto';
-    container.appendChild(sidebar);
+    sidebar.style.display = 'flex';
+    sidebar.style.flexDirection = 'column';
+    sidebar.style.gap = '10px';
+    contentArea.appendChild(sidebar);
 
-    // Add sidebar content
-    sidebar.innerHTML = `
-        <div class="sidebar-header">
-            <h2 style="color: #fff; margin: 0 0 20px 0;">Code Analyzer</h2>
-        </div>
-        <div class="sidebar-menu">
-            <button class="menu-item active" data-view="ast" style="width: 100%; padding: 10px; margin: 5px 0; background: #2d2d2d; border: none; color: #fff; text-align: left; cursor: pointer; border-radius: 4px;">
-                <span class="icon">🔍</span>
-                <span>AST View</span>
-            </button>
-            <button class="menu-item" data-view="modules" style="width: 100%; padding: 10px; margin: 5px 0; background: #2d2d2d; border: none; color: #fff; text-align: left; cursor: pointer; border-radius: 4px;">
-                <span class="icon">📦</span>
-                <span>Module Dependencies</span>
-            </button>
-            <button class="menu-item" data-view="vulnerabilities" style="width: 100%; padding: 10px; margin: 5px 0; background: #2d2d2d; border: none; color: #fff; text-align: left; cursor: pointer; border-radius: 4px;">
-                <span class="icon">🔒</span>
-                <span>Vulnerabilities</span>
-            </button>
-        </div>
-        <div class="sidebar-stats" style="margin-top: 20px;">
-            <div class="stat-item" style="margin: 10px 0;">
-                <span class="stat-label" style="color: #888;">Files</span>
-                <span class="stat-value" id="files-count" style="color: #fff; float: right;">${data?.files?.length || 0}</span>
-            </div>
-            <div class="stat-item" style="margin: 10px 0;">
-                <span class="stat-label" style="color: #888;">Nodes</span>
-                <span class="stat-value" id="nodes-count" style="color: #fff; float: right;">${data?.nodes?.length || 0}</span>
-            </div>
-            <div class="stat-item" style="margin: 10px 0;">
-                <span class="stat-label" style="color: #888;">Issues</span>
-                <span class="stat-value" id="issues-count" style="color: #fff; float: right;">${data?.issues?.length || 0}</span>
-            </div>
-        </div>
-    `;
+    // Create main panel
+    const mainPanel = document.createElement('div');
+    mainPanel.style.flex = '1';
+    mainPanel.style.backgroundColor = 'rgba(30, 30, 30, 0.8)';
+    mainPanel.style.margin = '20px';
+    mainPanel.style.borderRadius = '10px';
+    mainPanel.style.overflow = 'hidden';
+    contentArea.appendChild(mainPanel);
 
-    // Create visualization container
-    const vizContainer = document.createElement('div');
-    vizContainer.style.flex = '1';
-    vizContainer.style.height = '100%';
-    vizContainer.style.position = 'relative';
-    container.appendChild(vizContainer);
+    // Navigation buttons
+    const sections = [
+        { 
+            name: 'Modules', 
+            icon: '📦', 
+            color: '#4A9EFF',
+            description: 'Project modules and their dependencies'
+        },
+        { 
+            name: 'Functions', 
+            icon: '🔧', 
+            color: '#FFB74D',
+            description: 'Function calls and data flow analysis'
+        },
+        { 
+            name: 'Vulnerabilities', 
+            icon: '⚠️', 
+            color: '#FF5252',
+            description: 'Security vulnerabilities and risks'
+        },
+        { 
+            name: 'Variables', 
+            icon: '📊', 
+            color: '#66BB6A',
+            description: 'Variable usage and data types'
+        }
+    ];
 
-    // Add visualization canvas
-    const canvas = document.createElement('canvas');
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    vizContainer.appendChild(canvas);
+    const contentSections = [];
+    let activeSection = 0;
+
+    sections.forEach((section, index) => {
+        // Create navigation button
+        const button = document.createElement('button');
+        button.style.display = 'flex';
+        button.style.alignItems = 'center';
+        button.style.gap = '10px';
+        button.style.width = '100%';
+        button.style.padding = '15px';
+        button.style.border = 'none';
+        button.style.borderRadius = '8px';
+        button.style.backgroundColor = index === 0 ? section.color + '20' : 'transparent';
+        button.style.color = 'white';
+        button.style.cursor = 'pointer';
+        button.style.transition = 'all 0.3s';
+        button.style.textAlign = 'left';
+        
+        const icon = document.createElement('span');
+        icon.textContent = section.icon;
+        icon.style.fontSize = '20px';
+        
+        const text = document.createElement('div');
+        text.style.display = 'flex';
+        text.style.flexDirection = 'column';
+        
+        const name = document.createElement('span');
+        name.textContent = section.name;
+        name.style.fontWeight = 'bold';
+        
+        const desc = document.createElement('span');
+        desc.textContent = section.description;
+        desc.style.fontSize = '12px';
+        desc.style.opacity = '0.7';
+        
+        text.appendChild(name);
+        text.appendChild(desc);
+        
+        button.appendChild(icon);
+        button.appendChild(text);
+        sidebar.appendChild(button);
+
+        // Create content section
+        const content = document.createElement('div');
+        content.style.display = index === 0 ? 'block' : 'none';
+        content.style.padding = '20px';
+        content.style.height = '100%';
+        content.style.overflow = 'auto';
+        mainPanel.appendChild(content);
+        contentSections.push(content);
+
+        // Add click handler
+        button.addEventListener('click', () => {
+            activeSection = index;
+            contentSections.forEach((c, i) => {
+                c.style.display = i === index ? 'block' : 'none';
+                sidebar.children[i].style.backgroundColor = i === index ? sections[i].color + '20' : 'transparent';
+            });
+        });
+    });
+
+    // Modules Section
+    const modulesContent = contentSections[0];
+    if (data?.modules) {
+        const modulesGrid = document.createElement('div');
+        modulesGrid.style.display = 'grid';
+        modulesGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+        modulesGrid.style.gap = '20px';
+        modulesContent.appendChild(modulesGrid);
+
+        data.modules.forEach(module => {
+            const moduleCard = document.createElement('div');
+            moduleCard.style.backgroundColor = 'rgba(74, 158, 255, 0.1)';
+            moduleCard.style.padding = '20px';
+            moduleCard.style.borderRadius = '8px';
+            moduleCard.style.color = 'white';
+            moduleCard.style.borderLeft = `4px solid ${sections[0].color}`;
+            
+            const name = document.createElement('div');
+            name.textContent = module;
+            name.style.fontWeight = 'bold';
+            name.style.fontSize = '18px';
+            name.style.marginBottom = '10px';
+            
+            const path = document.createElement('div');
+            path.textContent = module.split('/').pop();
+            path.style.opacity = '0.7';
+            path.style.fontSize = '14px';
+            
+            moduleCard.appendChild(name);
+            moduleCard.appendChild(path);
+            modulesGrid.appendChild(moduleCard);
+        });
+    }
+
+    // Functions Section
+    const functionsContent = contentSections[1];
+    const functionsContainer = document.createElement('div');
+    functionsContainer.style.width = '100%';
+    functionsContainer.style.height = '100%';
+    functionsContent.appendChild(functionsContainer);
+
+    // Initialize D3 force-directed graph
+    const svg = d3.select(functionsContainer)
+        .append('svg')
+        .attr('width', '100%')
+        .attr('height', '100%');
+
+    const simulation = d3.forceSimulation()
+        .force('link', d3.forceLink().id(d => d.id))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(functionsContainer.clientWidth / 2, functionsContainer.clientHeight / 2));
+
+    if (data?.dataflow) {
+        const link = svg.append('g')
+            .selectAll('line')
+            .data(data.dataflow)
+            .enter()
+            .append('line')
+            .attr('stroke', 'rgba(255, 183, 77, 0.3)')
+            .attr('stroke-width', 2);
+
+        if (data?.functions) {
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(data.functions)
+                .enter()
+                .append('circle')
+                .attr('r', 10)
+                .attr('fill', 'rgba(255, 183, 77, 0.8)');
+
+            simulation.nodes(data.functions).on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+            });
+        }
+    }
+
+    // Vulnerabilities Section
+    const vulnContent = contentSections[2];
+    if (data?.vulnerabilities) {
+        const vulnGrid = document.createElement('div');
+        vulnGrid.style.display = 'grid';
+        vulnGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(400px, 1fr))';
+        vulnGrid.style.gap = '20px';
+        vulnContent.appendChild(vulnGrid);
+
+        data.vulnerabilities.forEach(vuln => {
+            const vulnCard = document.createElement('div');
+            vulnCard.style.backgroundColor = 'rgba(255, 82, 82, 0.1)';
+            vulnCard.style.padding = '20px';
+            vulnCard.style.borderRadius = '8px';
+            vulnCard.style.color = 'white';
+            vulnCard.style.borderLeft = `4px solid ${sections[2].color}`;
+            
+            const header = document.createElement('div');
+            header.style.display = 'flex';
+            header.style.justifyContent = 'space-between';
+            header.style.alignItems = 'center';
+            header.style.marginBottom = '15px';
+            
+            const title = document.createElement('div');
+            title.style.fontWeight = 'bold';
+            title.style.fontSize = '18px';
+            title.textContent = vuln.vulnerability || 'Security Issue';
+            
+            const line = document.createElement('div');
+            line.style.backgroundColor = 'rgba(255, 82, 82, 0.2)';
+            line.style.padding = '5px 10px';
+            line.style.borderRadius = '4px';
+            line.style.fontSize = '14px';
+            line.textContent = `Line ${vuln.line}`;
+            
+            header.appendChild(title);
+            header.appendChild(line);
+            
+            const file = document.createElement('div');
+            file.style.marginBottom = '10px';
+            file.style.opacity = '0.7';
+            file.textContent = vuln.file.split('/').pop();
+            
+            const desc = document.createElement('div');
+            desc.style.opacity = '0.8';
+            desc.textContent = vuln.description;
+            
+            vulnCard.appendChild(header);
+            vulnCard.appendChild(file);
+            vulnCard.appendChild(desc);
+            vulnGrid.appendChild(vulnCard);
+        });
+    }
+
+    // Variables Section
+    const varsContent = contentSections[3];
+    if (data?.variables) {
+        const varsGrid = document.createElement('div');
+        varsGrid.style.display = 'grid';
+        varsGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+        varsGrid.style.gap = '20px';
+        varsContent.appendChild(varsGrid);
+
+        data.variables.forEach(variable => {
+            const varCard = document.createElement('div');
+            varCard.style.backgroundColor = 'rgba(102, 187, 106, 0.1)';
+            varCard.style.padding = '20px';
+            varCard.style.borderRadius = '8px';
+            varCard.style.color = 'white';
+            varCard.style.borderLeft = `4px solid ${sections[3].color}`;
+            
+            const name = document.createElement('div');
+            name.style.fontWeight = 'bold';
+            name.style.fontSize = '18px';
+            name.style.marginBottom = '10px';
+            name.textContent = variable.name;
+            
+            const type = document.createElement('div');
+            type.style.marginBottom = '5px';
+            type.style.opacity = '0.8';
+            type.textContent = `Type: ${variable.type}`;
+            
+            const value = document.createElement('div');
+            value.style.opacity = '0.8';
+            value.textContent = `Value: ${variable.value}`;
+            
+            varCard.appendChild(name);
+            varCard.appendChild(type);
+            varCard.appendChild(value);
+            varsGrid.appendChild(varCard);
+        });
+    }
 
     // Cleanup function
     const cleanup = () => {
-        root.innerHTML = '';
+        if (typeof background.cleanup === 'function') background.cleanup();
+        if (typeof d3Bg.cleanup === 'function') d3Bg.cleanup();
     };
 
     return { cleanup };

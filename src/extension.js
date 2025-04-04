@@ -190,10 +190,7 @@ function getWebviewContent(webview, bundleUri, stylesUri, projectDir) {
     </head>
     <body>
         <div id="root"></div>
-        <div class="data-display">
-            <h3>Project Directory:</h3>
-            <pre>${projectDir}</pre>
-        </div>
+        
         <div class="debug-info"></div>
         <script>
             window.vscode = acquireVsCodeApi();

@@ -1,4 +1,4 @@
-# SCode Analyzer
+# SCode Analyzer(AST-Eroid)
 
 A powerful code analysis and visualization tool for VS Code.
 
@@ -20,8 +20,8 @@ A powerful code analysis and visualization tool for VS Code.
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Zane-Dev14/scode-analyzer
-cd scode-analyzer
+git clone https://github.com/Zane-Dev14/SCode
+cd SCode
 ```
 
 2. Install dependencies:
